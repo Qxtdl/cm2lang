@@ -16,7 +16,15 @@ typedef enum {
     TOKEN_COMMA,       // ,
     TOKEN_IDENTIFIER,  // variable/function names
     TOKEN_NUMBER,      // numeric literals
-    TOKEN_EOF  // end of input
-} token_t;
+    TOKEN_EOF          // end of input
+} token_type_t;
+
+typedef struct {
+    token_type_t type;
+    char *value;
+} token_t
+
+void lexer_init();
+bool lexer_next_token();
 
 #endif // LEXER_H
