@@ -1,6 +1,7 @@
 CC = gcc
 CCFLAGS = -Wall -Wextra
-SRC = $(wildcard src/*.c)
+SRC_SUBDIR = $(wildcard src/**/*.c)
+SRC = $(wildcard src/*.c) $(SRC_SUBDIR)
 BUILD_DIR = build/
 
 .PHONY: all compile clean
@@ -8,8 +9,10 @@ BUILD_DIR = build/
 all: clean compile
 
 clean:
-	rm -rf $(BUILD_DIR)*
+	rm -rf $(BUILD_DIR)cm2lc
 
 compile:
 	$(CC) $(CCFLAGS) $(SRC) -o $(BUILD_DIR)cm2lc
 
+run:
+	./build/cm2lc examples/example.cm2l
