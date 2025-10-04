@@ -16,7 +16,7 @@ typedef enum {
     TOKEN_COMMA,       // ,
     TOKEN_IDENTIFIER,  // variable/function names
     TOKEN_NUMBER,      // numeric literals
-    TOKEN_END_OF_FILE  // end of input
+    TOKEN_EOF  // end of input
 } token_t;
 
 
