@@ -1,5 +1,6 @@
 #ifndef LEXER_H
 #define LEXER_H
+#include <stdbool.h>
 
 typedef enum {
     L_PARAN,
@@ -22,7 +23,7 @@ typedef enum {
 typedef struct {
     token_type_t type;
     char *value;
-} token_t
+} token_t;
 
 void lexer_init();
 bool lexer_next_token();
