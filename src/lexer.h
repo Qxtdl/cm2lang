@@ -16,8 +16,11 @@ typedef enum {
     TOKEN_COMMA,       // ,
     TOKEN_IDENTIFIER,  // variable/function names
     TOKEN_NUMBER,      // numeric literals
-    TOKEN_EOF  // end of input
+    TOKEN_EOF          // end of input
 } token_t;
+
+token_t* tokenize(const char **input);
+char* token_to_string(const char **input);
 
 
 #endif // LEXER_H
