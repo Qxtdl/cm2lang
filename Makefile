@@ -6,7 +6,7 @@ BUILD_DIR = build/
 
 .PHONY: all compile clean
 
-all: clean compile
+all: clean compile run
 
 clean:
 	rm -rf $(BUILD_DIR)cm2lc

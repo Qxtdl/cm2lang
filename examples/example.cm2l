@@ -1,5 +1,4 @@
-main() {
-    u8 x = 1;
-    while (x)
-        x++;
+noreturn main(noparam) {
+    u8 x = 123;
+	u8 y = 256;
 }
