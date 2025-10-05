@@ -72,7 +72,8 @@ typedef struct {
     size_t length;
 } token_t;
 
-void lexer_init();
+void lexer_init(const char *source);
 bool lexer_next_token();
+token_t *lexer_read_token();
 
 #endif // LEXER_H
