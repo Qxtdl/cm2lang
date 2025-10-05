@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -Wall -Wextra
+CCFLAGS = -Wall -Wextra -g
 SRC_SUBDIR = $(wildcard src/**/*.c)
 SRC = $(wildcard src/*.c) $(SRC_SUBDIR)
 BUILD_DIR = build/
@@ -15,4 +15,4 @@ compile:
 	$(CC) $(CCFLAGS) $(SRC) -o $(BUILD_DIR)cm2lc
 
 run:
-	./build/cm2lc examples/example.cm2l
+	./build/cm2lc examples/example.cm2l build/compiled.ir

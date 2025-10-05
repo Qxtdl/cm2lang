@@ -1,4 +1,4 @@
-noreturn main(noparam) {
+fn noreturn main(noparam) {
     u8 x = 123;
 	u8 y = 256;
 }
