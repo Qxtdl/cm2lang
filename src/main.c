@@ -1,12 +1,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "globals.h"
 #include "lexer/lexer.h"
 
 int main(int argc, char* argv[])
 {
     if (argc >= 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h")) == 0)
+    {
         printf("Usage: cm2lc <sourcefile>\n");
+        return 0;
+    }
     
     FILE *source_file = fopen(argv[1], "rb");
     if (source_file == NULL)
@@ -36,5 +40,7 @@ int main(int argc, char* argv[])
     source_code[file_size] = '\0';
     fclose(source_file);
 
-    printf("Source Code:\n%s\n", source_code);
+    lexer_init(source_code);
+    while (lexer_next_token());
+    printf("main.c: Finished lexing\n");
 }
