@@ -1,4 +1,5 @@
 fn noreturn main(noparam) {
     u8 x = 123;
 	u8 y = 256;
+    s32 z = 2048;
 }

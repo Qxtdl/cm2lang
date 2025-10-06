@@ -29,6 +29,7 @@ const char *tokens[] = {
 
     "=",        // TOKEN_ASSIGN
     ";",        // TOKEN_SEMICOLON
+
     "+",        // TOKEN_PLUS
     "-",        // TOKEN_MINUS
 
@@ -107,16 +108,12 @@ bool lexer_next_token(void)
     {
         size_t token_length = strlen(tokens[i]);
         if (token_length > 0 && strncmp(lexer_state.current_pos, tokens[i], token_length) == 0)
-        {
-            // char *new_token_name = malloc(token_length + 1);
-            // Check_alloc_fail(new_token_name, exit(1))
-            // new_token_name[token_length + 1] = '\0';
-            // strncpy(new_token_name, lexer_state.current_pos, token_length);
-            
+        {   
             lexer_push_token(i, token_dup(token_length, lexer_state.current_pos));
             lexer_state.current_pos += token_length;
             
-            if (i == TOKEN_U8 || i == TOKEN_U32 || i == TOKEN_S8 || i == TOKEN_S16 || i == TOKEN_S32)
+            // TODO: Remove this garbage
+            if (i == TOKEN_U8 || i == TOKEN_U16 || i == TOKEN_U32 || i == TOKEN_S8 || i == TOKEN_S16 || i == TOKEN_S32)
             {
                 lexer_advance_till_non_whitespace
                 const char *var_start = lexer_state.current_pos;
@@ -124,14 +121,18 @@ bool lexer_next_token(void)
                 size_t var_length = lexer_state.current_pos - var_start;
                 lexer_push_token(TOKEN_IDENTIFIER, token_dup(var_length, var_start));
             }
-
-            if (i == TOKEN_ASSIGN)
+            else if (i == TOKEN_ASSIGN)
             {
                 lexer_advance_till_non_whitespace
                 const char *number_start = lexer_state.current_pos;
                 lexer_advance_till_semicolon
                 size_t number_length = lexer_state.current_pos - number_start;
                 lexer_push_token(TOKEN_NUMBER, token_dup(number_length, number_start));
+            }
+
+            if (i == TOKEN_PLUS)
+            {
+
             }
 
             return true;

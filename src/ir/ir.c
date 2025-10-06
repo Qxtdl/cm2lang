@@ -60,9 +60,23 @@ void ir_process(void)
             case TOKEN_MAIN_FUNCTION:
                 add_label("main"); break;
             case TOKEN_U8:
+            case TOKEN_S8:
                 lexer_advance_token();
                 lexer_advance_token();
                 add_asm((ir_inst_t){IR_INST_PUSH_8, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
+                break;
+            case TOKEN_U16:
+            case TOKEN_S16:
+                lexer_advance_token();
+                lexer_advance_token();
+                add_asm((ir_inst_t){IR_INST_PUSH_16, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
+                break;
+            case TOKEN_U32:
+            case TOKEN_S32:
+                lexer_advance_token();
+                lexer_advance_token();
+                add_asm((ir_inst_t){IR_INST_PUSH_32, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
+                break;
         }
         
         free(token.value);
