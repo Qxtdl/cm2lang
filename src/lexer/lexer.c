@@ -33,7 +33,7 @@ const char *tokens[] = {
     "+",        // TOKEN_PLUS
     "-",        // TOKEN_MINUS
 
-    "",         // TOKEN_IDENTIFIER (UNUSED)
+    "",         // TOKEN_NAME (UNUSED)
     "",         // TOKEN_NUMBER     (UNUSED)
 
     ""          // TOKEN_EOF        (UNUSED)
@@ -54,7 +54,7 @@ void lexer_init(const char *source)
     lexer_state.tokens_size = 0;
 }
 
-static void lexer_push_token(token_type_t type, const char *token_value)
+static void lexer_push_token(token_type_t type, char *token_value)
 {
     if (lexer_state.current_token == NULL)
     lexer_state.current_token = (token_t *)malloc(sizeof(token_t));
@@ -63,7 +63,6 @@ static void lexer_push_token(token_type_t type, const char *token_value)
     Check_alloc_fail(lexer_state.current_token, exit(1))
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].type = type;
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value = token_value;
-    
     if (type == TOKEN_EOF)
         debug_printf("EOF\n");
     if (lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value)
@@ -71,19 +70,6 @@ static void lexer_push_token(token_type_t type, const char *token_value)
 
     lexer_state.tokens_size += sizeof(token_t);
 }   
-
-
-#define lexer_advance_till_non_whitespace \
-while (isspace(*lexer_state.current_pos)) \
-    lexer_state.current_pos++;
-
-#define lexer_advance_till_whitespace \
-while (!isspace(*lexer_state.current_pos)) \
-    lexer_state.current_pos++;
-
-#define lexer_advance_till_semicolon \
-while (*lexer_state.current_pos != ';') \
-    lexer_state.current_pos++;
 
 static char *token_dup(size_t token_len, const char *token)
 {
@@ -93,6 +79,22 @@ static char *token_dup(size_t token_len, const char *token)
     strncpy(new_token, token, token_len);
     return new_token;
 }
+
+#define lexer_advance_till_non_whitespace \
+while (*lexer_state.current_pos != '\0' && isspace(*lexer_state.current_pos)) \
+    lexer_state.current_pos++;
+
+#define lexer_advance_till_whitespace \
+while (*lexer_state.current_pos != '\0' && !isspace(*lexer_state.current_pos)) \
+    lexer_state.current_pos++;
+
+#define lexer_advance_till_whitespace_or_semicolon \
+while (*lexer_state.current_pos != '\0' && !isspace(*lexer_state.current_pos) && *lexer_state.current_pos != ';') \
+    lexer_state.current_pos++;
+
+#define lexer_advance_till_semicolon \
+while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != ';') \
+    lexer_state.current_pos++;
 
 bool lexer_next_token(void)
 {
@@ -112,35 +114,28 @@ bool lexer_next_token(void)
             lexer_push_token(i, token_dup(token_length, lexer_state.current_pos));
             lexer_state.current_pos += token_length;
             
-            // TODO: Remove this garbage
-            if (i == TOKEN_U8 || i == TOKEN_U16 || i == TOKEN_U32 || i == TOKEN_S8 || i == TOKEN_S16 || i == TOKEN_S32)
-            {
-                lexer_advance_till_non_whitespace
-                const char *var_start = lexer_state.current_pos;
-                lexer_advance_till_whitespace
-                size_t var_length = lexer_state.current_pos - var_start;
-                lexer_push_token(TOKEN_IDENTIFIER, token_dup(var_length, var_start));
-            }
-            else if (i == TOKEN_ASSIGN)
-            {
-                lexer_advance_till_non_whitespace
-                const char *number_start = lexer_state.current_pos;
-                lexer_advance_till_semicolon
-                size_t number_length = lexer_state.current_pos - number_start;
-                lexer_push_token(TOKEN_NUMBER, token_dup(number_length, number_start));
-            }
-
-            if (i == TOKEN_PLUS)
-            {
-
-            }
-
             return true;
         }
     }
+    
+    if (isdigit(*lexer_state.current_pos))
+    {
+        const char *digit_start = lexer_state.current_pos;
+        lexer_advance_till_whitespace_or_semicolon
+        const char *digit_end = lexer_state.current_pos;
+        size_t digit_length = digit_end - digit_start;
+        lexer_push_token(TOKEN_NUMBER, token_dup(digit_length, digit_start));
+    }
+    else
+    {
+        const char *name_start = lexer_state.current_pos;
+        lexer_advance_till_whitespace_or_semicolon
+        const char *name_end = lexer_state.current_pos;
+        size_t name_len = name_end - name_start;
+        lexer_push_token(TOKEN_NAME, token_dup(name_len, name_start));   
+    }
 
-    perror("lexer.c: Some invalid tokens were detected. Is your code written correctly?\n");
-    exit(1);
+    return true;
 }
 
 static token_t *current_token = NULL;

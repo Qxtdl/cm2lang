@@ -58,24 +58,34 @@ void ir_process(void)
         switch (token.type)
         {
             case TOKEN_MAIN_FUNCTION:
-                add_label("main"); break;
+                debug_printf("Got TOKEN_MAIN_FUNCTION\n");
+                add_label("main"); 
+                break;
             case TOKEN_U8:
             case TOKEN_S8:
+                debug_printf("Got 8VAR\n");
                 lexer_advance_token();
                 lexer_advance_token();
                 add_asm((ir_inst_t){IR_INST_PUSH_8, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
                 break;
             case TOKEN_U16:
             case TOKEN_S16:
-                lexer_advance_token();
-                lexer_advance_token();
+                debug_printf("Got 16VAR\n");
                 add_asm((ir_inst_t){IR_INST_PUSH_16, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
                 break;
             case TOKEN_U32:
             case TOKEN_S32:
-                lexer_advance_token();
-                lexer_advance_token();
+                debug_printf("Got 16VAR\n");
                 add_asm((ir_inst_t){IR_INST_PUSH_32, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
+                break;
+            case TOKEN_NAME:
+                debug_printf("Got TOKEN_NAME\n");
+                break;
+            case TOKEN_ASSIGN:
+                debug_printf("Got TOKEN_ASSIGN\n");
+                break;            
+            case TOKEN_PLUS:
+                debug_printf("Got TOKEN_PLUS\n");
                 break;
         }
         

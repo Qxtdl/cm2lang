@@ -1,5 +1,5 @@
 fn noreturn main(noparam) {
-    u8 x = 123;
-	u8 y = 256;
-    s32 z = 2048;
+    u8 xvar = 1;
+    u8 yvar = 1;
+    u8 zvar = x + y;
 }

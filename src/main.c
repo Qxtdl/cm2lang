@@ -43,10 +43,7 @@ int main(int argc, char* argv[])
     lexer_init(source_code);
     while (lexer_next_token());
     debug_printf("main.c: Finished lexing\n");
-    ir_init();
-    debug_printf("main.c: Finished ir_init\n");
-    ir_process();
-    debug_printf("main.c: Finished ir processing\n");
+    parser_process();
 
     FILE *compiled = fopen(argv[2], "w");
     if (compiled == NULL)

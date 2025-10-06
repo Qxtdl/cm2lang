@@ -32,7 +32,7 @@ typedef enum {
     TOKEN_PLUS,
     TOKEN_MINUS,
 
-    TOKEN_IDENTIFIER,  // variable/function names
+    TOKEN_NAME,        // variable/function names
     TOKEN_NUMBER,      // numeric literals
     
     TOKEN_EOF          // end of input
@@ -40,7 +40,7 @@ typedef enum {
 
 typedef struct {
     token_type_t type;
-    const char *value;
+    char *value;
 } token_t;
 
 void lexer_init(const char *source);
