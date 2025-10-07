@@ -45,6 +45,7 @@ int main(int argc, char* argv[])
     while (lexer_next_token());
     debug_printf("main.c: Finished lexing\n");
     parser_process();
+    debug_printf("main.c: Finished parser processing\n");
 
     FILE *compiled = fopen(argv[2], "w");
     if (compiled == NULL)

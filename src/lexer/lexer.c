@@ -60,7 +60,6 @@ static void lexer_push_token(token_type_t type, char *token_value)
     lexer_state.current_token = (token_t *)malloc(sizeof(token_t));
     else
     lexer_state.current_token = (token_t *)realloc(lexer_state.current_token, lexer_state.tokens_size + sizeof(token_t));
-    Check_alloc_fail(lexer_state.current_token, exit(1))
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].type = type;
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value = token_value;
     if (type == TOKEN_EOF)
@@ -74,7 +73,6 @@ static void lexer_push_token(token_type_t type, char *token_value)
 static char *token_dup(size_t token_len, const char *token)
 {
     char *new_token = malloc(token_len + 1);
-    Check_alloc_fail(new_token, exit(1))
     new_token[token_len] = '\0';
     strncpy(new_token, token, token_len);
     return new_token;
