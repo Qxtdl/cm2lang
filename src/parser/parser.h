@@ -26,7 +26,9 @@ typedef struct vardecl_node {
 
 typedef struct ast_node {
     node_type_t type;
-    struct ast_node *next;
+    union {
+        fn_node_t fn_node;
+    };
 } ast_node_t;
 
 void parser_process(void);

@@ -4,6 +4,7 @@
 
 #include "globals.h"
 #include "lexer/lexer.h"
+#include "parser/parser.h"
 #include "ir/ir.h"
 
 extern struct ir_state_s ir_state;
@@ -51,6 +52,7 @@ int main(int argc, char* argv[])
         perror("Error writing compiled to file");
         return 1;
     }
+    
     fwrite(ir_state.compiled, 1, ir_state.compiled_len, compiled);
     fclose(compiled);
 }
