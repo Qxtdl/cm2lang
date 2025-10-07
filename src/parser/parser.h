@@ -22,13 +22,16 @@ typedef struct fn_node {
 
 typedef struct vardecl_node {
     const char *type;
-} vardecl_note_t;
+} vardecl_node_t;
+
+typedef union {
+    fn_node_t fn_node;
+    vardecl_node_t vardecl_node;
+} ast_node_union_t;
 
 typedef struct ast_node {
     node_type_t type;
-    union {
-        fn_node_t fn_node;
-    };
+    ast_node_union_t node_union;
 } ast_node_t;
 
 void parser_process(void);

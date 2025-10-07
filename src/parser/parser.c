@@ -1,18 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 
 #include "../globals.h"
 #include "parser.h"
 #include "../lexer/lexer.h"
 
-typedef union {
-    fn_node_t fn_node
-} ast_node_type_t;
+static ast_node_t *node = NULL; // last created one aswell
 
-static ast_node_t *create_ast_node(token_type_t type, ast_node_type_t node_type)
+static ast_node_t *create_ast_node(token_type_t type, ast_node_union_t node_type)
 {
-    static ast_node_t *node = NULL;
     if (node == NULL)
         node = calloc(0, sizeof(ast_node_t));
 
@@ -21,8 +19,14 @@ static ast_node_t *create_ast_node(token_type_t type, ast_node_type_t node_type)
     {
         case TOKEN_FN: node->type = NODE_FUNCTION; break;
     }
+    memcpy(&node->node_union, &node_type, sizeof(ast_node_union_t));
     debug_printf("Created a new node\n");
     return node;
+}
+
+void edit_ast_node()
+{
+    
 }
 
 void parser_process(void)
@@ -36,8 +40,11 @@ void parser_process(void)
             case TOKEN_EOF:
                 return;
             case TOKEN_FN:
-                ast_node_t *fn_node = create_ast_node(token.type);
+                ast_node_t *fn_node = create_ast_node(
+                    token.type, (ast_node_union_t){(fn_node_t){0}});
                 break;
+            case TOKEN_NORETURN:
+                
         }
     }
 }
