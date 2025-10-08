@@ -4,6 +4,8 @@
 #include "../lexer/lexer.h"
 
 typedef enum node_type {
+    NODE_PROGRAM,
+    NODE_NAME,
     NODE_FUNCTION,
     NODE_VARDECL,
     NODE_BLOCK,
@@ -12,19 +14,31 @@ typedef enum node_type {
 
 struct ast_node;
 
-typedef struct fn_node {
-    const char *return_type;
-    const char *name;
-    const char **params;
+typedef struct {
+    struct ast_node **body;
+} program_node_t;
+
+typedef struct {
+    const char *value;
+} name_node_t;
+
+typedef struct {
+    struct ast_node **return_type;
+    struct ast_node **name;
+    // const char **params; // TODO remove
     int param_count;
     struct ast_node **body;
-} fn_node_t;
+} fn_node_t;    
 
-typedef struct vardecl_node {
-    const char *type;
+typedef struct {
+    struct ast_node **type;
+    struct ast_node **name;
+    struct ast_node **init;
 } vardecl_node_t;
 
 typedef union {
+    program_node_t program_node;
+    name_node_t name_node;
     fn_node_t fn_node;
     vardecl_node_t vardecl_node;
 } ast_node_union_t;

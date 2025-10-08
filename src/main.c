@@ -7,7 +7,7 @@
 #include "parser/parser.h"
 #include "ir/ir.h"
 
-extern struct ir_state_s ir_state;
+extern struct ir_state_s ir_state; // TODO: remove
 
 int main(int argc, char* argv[])
 {
