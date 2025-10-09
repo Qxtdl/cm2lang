@@ -25,7 +25,7 @@ typedef struct {
 typedef struct {
     struct ast_node **return_type;
     struct ast_node **name;
-    // const char **params; // TODO remove
+    struct ast_node **params;
     int param_count;
     struct ast_node **body;
 } fn_node_t;    
