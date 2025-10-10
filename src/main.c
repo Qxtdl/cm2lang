@@ -46,8 +46,12 @@ int main(int argc, char* argv[])
     debug_printf("main.c: Finished lexing\n");
     parser_process();
     debug_printf("main.c: Finished parser processing\n");
+    ir_init();
+    debug_printf("main.c: Finished ir initalization\n");
+    ir_process();
+    debug_printf("main.c: Finished ir processing\n");
 
-    FILE *compiled = fopen(argv[2], "w");
+    FILE *compiled = fopen(argv[2], "wb");
     if (compiled == NULL)
     {
         perror("Error writing compiled to file");

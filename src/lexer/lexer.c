@@ -8,8 +8,6 @@
 #include "lexer.h"
 
 const char *tokens[] = {
-    "main",     // TOKEN_MAIN_FUNCTION
-
     "(",        // TOKEN_L_BRACE
     ")",        // TOKEN_R_BRACE
     "{",        // TOKEN_L_PARAN

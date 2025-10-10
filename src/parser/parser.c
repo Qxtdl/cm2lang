@@ -7,7 +7,17 @@
 #include "parser.h"
 #include "../lexer/lexer.h"
 
-static ast_node_t *last_created_node = NULL;
+enum {
+    PARSE_GLOBAL,
+    PARSE_FUNCTION,
+    PARSE_FUNCTION_PARAMS,
+    PARSE_BLOCK
+} current_parse_context, before_block_parse_context;
+
+ast_node_t *program_node = NULL;
+ast_node_t *last_created_fn_node = NULL;
+ast_node_t *last_created_node = NULL;
+ast_node_ptr_t *last_created_block_nodes = NULL;
 
 static ast_node_t *create_ast_node(ast_node_t initalizer_node)
 {
@@ -17,75 +27,122 @@ static ast_node_t *create_ast_node(ast_node_t initalizer_node)
     return node;
 }
 
-typedef struct {
-    ast_node_t **children;
-    size_t num_children;
-} children_ptr_t;
-
-static void insert_ast_node(struct ast_node ***children, ast_node_t *new_ast_node)
+static void insert_ast_node(ast_node_ptr_t *ptr, ast_node_t *new_node)
 {
-    static children_ptr_t *known_children_ptrs = NULL;
-    static size_t known_children_ptrs_size = 0;
-    if (known_children_ptrs == NULL)
-        known_children_ptrs = malloc(sizeof(children_ptr_t)); 
-
-    for (size_t i = 0; i < known_children_ptrs_size; i++)
-    {
-        if (known_children_ptrs[i].children == *children)
-        {
-            // It is a known pointer
-            known_children_ptrs[i].children = realloc(known_children_ptrs[i].children, sizeof(struct ast_node *) * (++(known_children_ptrs[i].num_children)));
-            known_children_ptrs[i].children[known_children_ptrs[i].num_children - 1] = new_ast_node;
-            return;
-        }
-    }
-    known_children_ptrs = realloc(known_children_ptrs, sizeof(children_ptr_t) * (++known_children_ptrs_size));
-    known_children_ptrs[known_children_ptrs_size - 1].children = malloc(sizeof(struct ast_node *));
-    *children = known_children_ptrs[known_children_ptrs_size - 1].children;
-    known_children_ptrs[known_children_ptrs_size - 1].num_children = 1;
-    known_children_ptrs[known_children_ptrs_size - 1].children[known_children_ptrs[known_children_ptrs_size - 1].num_children++] = new_ast_node;
+    if (ptr->num_children == 0)
+        ptr->ast_nodes = malloc(sizeof(ast_node_t *));
+    
+    ptr->ast_nodes = realloc(ptr->ast_nodes, ++(ptr->num_children));
+    ptr->ast_nodes[ptr->num_children - 1] = new_node;
 }
 
-static ast_node_t *last_created_fn_node = NULL;
+ast_node_t *ast_walk(ast_node_ptr_t *ptr)
+{
+    if (ptr->times_walked < ptr->num_children)
+        return ptr->ast_nodes[ptr->times_walked++];
+    return NULL;
+}
 
 void parser_process(void)
-{           
-    ast_node_t *program = create_ast_node((ast_node_t){NODE_PROGRAM, {.program_node = {0}}});
-    bool ir_continue = true;
-    while (ir_continue)
+{   
+    current_parse_context = PARSE_GLOBAL;
+    program_node = create_ast_node((ast_node_t){NODE_PROGRAM, {.program_node = {0}}});
+
+    bool parser_continue = true;
+    while (parser_continue)
     {
-        token_t token = lexer_read_token(&ir_continue);
-        if (!ir_continue) break; // TOKEN_EOF
+        token_t token = lexer_read_token(&parser_continue);
+        if (!parser_continue) break;
+
         switch (token.type)
         {
             case TOKEN_FN:
-                insert_ast_node(&program->node_union.program_node.body, (last_created_fn_node = &(ast_node_t){NODE_FUNCTION, {.fn_node = {0}}})); break;
+                current_parse_context = PARSE_FUNCTION;
+                insert_ast_node(&program_node->node_union.program_node.body, (last_created_fn_node = create_ast_node((ast_node_t){NODE_FUNCTION, {.fn_node = {0}}}))); 
+                break;
+            case TOKEN_L_BRACE:
+                before_block_parse_context = current_parse_context;
+                current_parse_context = PARSE_BLOCK; 
+                last_created_block_nodes = &last_created_fn_node->node_union.fn_node.body; // TODO: REMOVE, VERY TEMPORARY
+                break;
+            case TOKEN_R_BRACE:
+                current_parse_context = before_block_parse_context; break;
             case TOKEN_NORETURN:
                 insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"noreturn"}}})); break;
             case TOKEN_NOPARAM:
                 insert_ast_node(&last_created_fn_node->node_union.fn_node.params, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"noparam"}}})); break;
             case TOKEN_U8:
-                insert_ast_node(&program->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u8"}}})); break;
-            case TOKEN_U16:
-                insert_ast_node(&program->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u16"}}})); break;
-            case TOKEN_U32:
-                insert_ast_node(&program->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u32"}}})); break;
-            case TOKEN_S8:
-                insert_ast_node(&program->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s8"}}})); break;
-            case TOKEN_S16:
-                insert_ast_node(&program->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s16"}}})); break;
-            case TOKEN_S32:
-                insert_ast_node(&program->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s32"}}})); break;
-            case TOKEN_NAME:
-                switch(last_created_node->type)
+                switch (current_parse_context)
                 {
-                    case NODE_FUNCTION:
-                        insert_ast_node(&last_created_node->node_union.fn_node.name, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {token.value}}})); break;
-                    case NODE_VARDECL:
-                        insert_ast_node(&last_created_node->node_union.vardecl_node.name, create_ast_node((ast_node_t){NODE_VARDECL, {.vardecl_node = {0}}})); break;
+                    case PARSE_FUNCTION:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u8"}}})); break;
+                    case PARSE_FUNCTION_PARAMS:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.params,create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u8"}}})); break;
+                    case PARSE_BLOCK:
+                        insert_ast_node(last_created_block_nodes, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u8"}}})); break;
+                }
+                break;
+            case TOKEN_U16:
+                switch (current_parse_context)
+                {
+                    case PARSE_FUNCTION:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u16"}}})); break;
+                    case PARSE_FUNCTION_PARAMS:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.params,create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u16"}}})); break;
+                    case PARSE_BLOCK:
+                        insert_ast_node(last_created_block_nodes, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u16"}}})); break;
+                }
+            case TOKEN_U32:
+                switch (current_parse_context)
+                {
+                    case PARSE_FUNCTION:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u32"}}})); break;
+                    case PARSE_FUNCTION_PARAMS:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.params,create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u32"}}})); break;
+                    case PARSE_BLOCK:
+                        insert_ast_node(last_created_block_nodes, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"u32"}}})); break;
+                }
+            case TOKEN_S8:
+                switch (current_parse_context)
+                {
+                    case PARSE_FUNCTION:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s8"}}})); break;
+                    case PARSE_FUNCTION_PARAMS:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.params,create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s8"}}})); break;
+                    case PARSE_BLOCK:
+                        insert_ast_node(last_created_block_nodes, create_ast_node((ast_node_t){NODE_VARDECL, {.name_node = {"s8"}}})); break;
+                }
+            case TOKEN_S16:
+                switch (current_parse_context)
+                {
+                    case PARSE_FUNCTION:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s16"}}})); break;
+                    case PARSE_FUNCTION_PARAMS:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.params,create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s16"}}})); break;
+                    case PARSE_BLOCK:
+                        insert_ast_node(last_created_block_nodes, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s16"}}})); break;
+                }
+            case TOKEN_S32:
+                switch (current_parse_context)
+                {
+                    case PARSE_FUNCTION:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s32"}}})); break;
+                    case PARSE_FUNCTION_PARAMS:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.params, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s32"}}})); break;
+                    case PARSE_BLOCK:
+                        insert_ast_node(last_created_block_nodes, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {"s32"}}})); break;
+                }
+            case TOKEN_NAME:
+                switch(current_parse_context)
+                {
+                    case PARSE_FUNCTION:
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.name, create_ast_node((ast_node_t){NODE_NAME, {.name_node = {token.value}}})); 
+                        current_parse_context = PARSE_FUNCTION_PARAMS;                       
+                        break;
+                    case PARSE_BLOCK:
                 }
             break;
         }
     }
-    debug_printf(last_created_fn_node->node_union.fn_node.return_type[0]);
 }
+

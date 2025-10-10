@@ -4,9 +4,6 @@
 #include <stdbool.h>
 
 typedef enum {
-    // entry point for all cm2l programs
-    TOKEN_MAIN_FUNCTION,
-
     // braces and parantheses
     TOKEN_L_PARAN,
     TOKEN_R_PARAN,

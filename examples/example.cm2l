@@ -1,5 +1,10 @@
-fn noreturn main(noparam) {
+fn noreturn main (noparam) {
     u8 xvar = 1;
     u8 yvar = 1;
     u8 zvar = x + y;
+}
+
+fn noreturn other (noparam)
+{
+    
 }

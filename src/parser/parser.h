@@ -15,7 +15,13 @@ typedef enum node_type {
 struct ast_node;
 
 typedef struct {
-    struct ast_node **body;
+    struct ast_node **ast_nodes;
+    size_t num_children;
+    size_t times_walked;
+} ast_node_ptr_t;
+
+typedef struct {
+    ast_node_ptr_t body;
 } program_node_t;
 
 typedef struct {
@@ -23,17 +29,17 @@ typedef struct {
 } name_node_t;
 
 typedef struct {
-    struct ast_node **return_type;
-    struct ast_node **name;
-    struct ast_node **params;
+    ast_node_ptr_t return_type;
+    ast_node_ptr_t name;
+    ast_node_ptr_t params;
     int param_count;
-    struct ast_node **body;
+    ast_node_ptr_t body;
 } fn_node_t;    
 
 typedef struct {
-    struct ast_node **type;
-    struct ast_node **name;
-    struct ast_node **init;
+    ast_node_ptr_t type;
+    ast_node_ptr_t name;
+    ast_node_ptr_t init;
 } vardecl_node_t;
 
 typedef union {
@@ -49,5 +55,6 @@ typedef struct ast_node {
 } ast_node_t;
 
 void parser_process(void);
+ast_node_t *ast_walk(ast_node_ptr_t *ptr);
 
 #endif // PARSER_H

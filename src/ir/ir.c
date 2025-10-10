@@ -5,6 +5,7 @@
 #include "../globals.h"
 #include "ir.h"
 #include "../lexer/lexer.h"
+#include "../parser/parser.h"
 
 struct ir_state_s ir_state;
 
@@ -20,13 +21,11 @@ const char *opcodes[] = {
 
 #define r_strcat(dest, src) \
 dest = realloc(dest, strlen(dest) + strlen(src) + 1); \
-Check_alloc_fail(dest, exit(1)) \
 strcat(dest, src);
 
 void ir_init(void)
 {
     ir_state.compiled = malloc(1);
-    Check_alloc_fail(ir_state.compiled, exit(1))
     *ir_state.compiled = '\0';
     ir_state.compiled_len = 0;
 }
@@ -48,49 +47,26 @@ static void add_asm(ir_inst_t inst)
     r_strcat(ir_state.compiled, "\r\n\t")
 }
 
+extern ast_node_t *program_node;
+extern ast_node_t *last_created_fn_node;
+
+static bool ir_process_function(ast_node_t *fn_node)
+{
+    if (!fn_node) return false;
+
+    add_label(fn_node->node_union.fn_node.name.ast_nodes[0]->node_union.name_node.value);
+
+    ast_node_t *node;
+    while ((node = ast_walk(&fn_node->node_union.fn_node.body)))
+    {
+        //printf("%d\n", node->type)
+    }
+
+    return true;
+}
+
 void ir_process(void)
 {
-    bool ir_continue = true;
-    while (ir_continue)
-    {
-        token_t token = lexer_read_token(&ir_continue);
-        if (!ir_continue) break; // TOKEN_EOF
-        switch (token.type)
-        {
-            case TOKEN_MAIN_FUNCTION:
-                debug_printf("Got TOKEN_MAIN_FUNCTION\n");
-                add_label("main"); 
-                break;
-            case TOKEN_U8:
-            case TOKEN_S8:
-                debug_printf("Got 8VAR\n");
-                lexer_advance_token();
-                lexer_advance_token();
-                add_asm((ir_inst_t){IR_INST_PUSH_8, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
-                break;
-            case TOKEN_U16:
-            case TOKEN_S16:
-                debug_printf("Got 16VAR\n");
-                add_asm((ir_inst_t){IR_INST_PUSH_16, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
-                break;
-            case TOKEN_U32:
-            case TOKEN_S32:
-                debug_printf("Got 16VAR\n");
-                add_asm((ir_inst_t){IR_INST_PUSH_32, 0, 0, 0, lexer_read_token(&ir_continue).value, 1});
-                break;
-            case TOKEN_NAME:
-                debug_printf("Got TOKEN_NAME\n");
-                break;
-            case TOKEN_ASSIGN:
-                debug_printf("Got TOKEN_ASSIGN\n");
-                break;            
-            case TOKEN_PLUS:
-                debug_printf("Got TOKEN_PLUS\n");
-                break;
-        }
-        
-        free(token.value);
-    }
+    while (ir_process_function(ast_walk(&program_node->node_union.program_node.body)));
     ir_state.compiled_len = strlen(ir_state.compiled);
-    debug_printf("////\n%s\n////\n", ir_state.compiled);
 }
