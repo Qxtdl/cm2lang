@@ -28,8 +28,7 @@ int main(int argc, char* argv[])
     long file_size = ftell(source_file);
     rewind(source_file);
 
-    char *source_code = (char *)malloc(file_size + 1);
-    Check_alloc_fail(source_code, exit(-1))
+    char *source_code = malloc(file_size + 1);
 
     size_t read_size = fread(source_code, 1, file_size, source_file);
     if ((long)read_size != file_size)

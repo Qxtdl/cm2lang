@@ -8,7 +8,6 @@ typedef enum node_type {
     NODE_NAME,
     NODE_FUNCTION,
     NODE_VARDECL,
-    NODE_BLOCK,
     NODE_EXPRESSION
 } node_type_t;
 
@@ -42,11 +41,17 @@ typedef struct {
     ast_node_ptr_t init;
 } vardecl_node_t;
 
+typedef struct {
+    ast_node_ptr_t ops;
+    ast_node_ptr_t operator;
+} expr_node_t;
+
 typedef union {
     program_node_t program_node;
     name_node_t name_node;
     fn_node_t fn_node;
     vardecl_node_t vardecl_node;
+    expr_node_t expr_node;
 } ast_node_union_t;
 
 typedef struct ast_node {

@@ -142,16 +142,10 @@ token_t lexer_read_token(bool *ir_continue)
     if (current_token == NULL)
         current_token = lexer_state.current_token;
 
-    if (times_read++ >= lexer_state.tokens_size / sizeof(token_t))
+    if (++times_read >= lexer_state.tokens_size / sizeof(token_t))
         *ir_continue = false;
     else
         *ir_continue = true;
     
     return *current_token++;
-}
-
-void lexer_advance_token()
-{
-    times_read++;
-    current_token++;
 }

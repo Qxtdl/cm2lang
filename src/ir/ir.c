@@ -59,7 +59,12 @@ static bool ir_process_function(ast_node_t *fn_node)
     ast_node_t *node;
     while ((node = ast_walk(&fn_node->node_union.fn_node.body)))
     {
-        //printf("%d\n", node->type)
+        switch (node->type)
+        {
+            case NODE_VARDECL:
+                debug_printf("got var\n");
+                break;
+        }
     }
 
     return true;
