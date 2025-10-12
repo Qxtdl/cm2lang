@@ -26,8 +26,8 @@ typedef struct {
     bool use_imm;
 } ir_inst_t;
 
-void ir_init(void);
-void ir_process(void);
+void ir_init();
+void ir_process();
 
 // Cm2 basic ir Reference
 // =============================
@@ -107,5 +107,7 @@ void ir_process(void);
 // -----
 // - Every operation uses the stack except call and ret they use call stack.
 // - Arithmetic and comparison operations always pop the required number of values and push the result back.
+
+////////////////////////////////////////////////////////////////
 
 #endif // IR_H

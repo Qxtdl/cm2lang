@@ -92,7 +92,7 @@ ast_node_t *ast_walk(ast_node_ptr_t *ptr)
 {
     if (ptr->times_walked < ptr->num_children)
         return ptr->ast_nodes[ptr->times_walked++];
-    return NULL;
+    return NULL; // walked too many times
 }
 
 void parser_process(void)
@@ -160,12 +160,16 @@ void parser_process(void)
                 {
                     case PARSE_FUNCTION:
                         push_context(PARSE_FUNCTION_PARAMS);
-                        insert_ast_node(&last_created_fn_node->node_union.fn_node.name, 
+                        insert_ast_node(&last_created_fn_node->node_union.fn_node.name,
                             create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));                      
                         break;
                     case PARSE_VAR:
                         insert_ast_node(&last_created_node->node_union.vardecl_node.name,
                             create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
+                        break;
+                    case PARSE_VAR_INIT:
+                        insert_ast_node(&last_created_expr_node->node_union.expr_node.ops,
+                            create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                         break;
                 }
                 break;
@@ -185,17 +189,22 @@ void parser_process(void)
                     case PARSE_VAR_INIT:
                         insert_ast_node(&last_created_expr_node->node_union.expr_node.ops, 
                             create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
-                        debug_printf("Got number on var init\n");
+                        break;
+                }
+                break;
+            case TOKEN_PLUS:
+            case TOKEN_MINUS:
+                switch (current_context)
+                {
+                    case PARSE_VAR_INIT:
+                        insert_ast_node(&last_created_expr_node->node_union.expr_node.operator, 
+                            create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                         break;
                 }
                 break;
             case TOKEN_SEMICOLON:
                 switch (current_context)
                 {
-                    // TODO: remove
-                    case PARSE_VAR:
-                        pop_context();
-                        break;
                     case PARSE_VAR_INIT:
                         pop_n_context(2);
                         break;

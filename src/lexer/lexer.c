@@ -92,7 +92,7 @@ while (*lexer_state.current_pos != '\0' && !isspace(*lexer_state.current_pos) &&
 while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != ';') \
     lexer_state.current_pos++;
 
-bool lexer_next_token(void)
+bool lexer_next_token()
 {
     lexer_advance_till_non_whitespace
     

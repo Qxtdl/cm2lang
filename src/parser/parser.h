@@ -42,7 +42,7 @@ typedef struct {
 } vardecl_node_t;
 
 typedef struct {
-    ast_node_ptr_t ops;
+    ast_node_ptr_t ops; // Must contain exactly 2
     ast_node_ptr_t operator;
 } expr_node_t;
 

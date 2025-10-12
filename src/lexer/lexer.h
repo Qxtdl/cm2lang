@@ -41,7 +41,7 @@ typedef struct {
 } token_t;
 
 void lexer_init(const char *source);
-bool lexer_next_token(void);
+bool lexer_next_token();
 token_t lexer_read_token(bool *ir_continue);
 void lexer_advance_token();
 

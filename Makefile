@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -Wall -Wextra -g
+CCFLAGS = -Wall -Wextra -fsanitize=address -g
 SRC_SUBDIR = $(wildcard src/**/*.c)
 SRC = $(wildcard src/*.c) $(SRC_SUBDIR)
 BUILD_DIR = build/
