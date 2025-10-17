@@ -13,12 +13,8 @@ const char *tokens[] = {
     "{",        // TOKEN_L_PARAN
     "}",        // TOKEN_R_PARAN
 
-    "u8",       // TOKEN_U8
-    "u16",      // TOKEN_U16
-    "u32",      // TOKEN_U32
-    "s8",       // TOKEN_S8
-    "s16",      // TOKEN_S16
-    "s32",      // TOKEN_S32
+    "v16",      // TOKEN_V16
+    "v32",      // TOKEN_V32
     "void",     // TOKEN_VOID
 
     "fn",       // TOKEN_FN
@@ -30,6 +26,9 @@ const char *tokens[] = {
 
     "+",        // TOKEN_PLUS
     "-",        // TOKEN_MINUS
+    "&",        // TOKEN_BITWISE_AND
+    "|",        // TOKEN_BITWISE_OR
+    "^",        // TOKEN_BITWISE_XOR
 
     "",         // TOKEN_NAME (UNUSED)
     "",         // TOKEN_NUMBER     (UNUSED)

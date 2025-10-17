@@ -9,17 +9,15 @@
 
 extern struct ir_state_s ir_state; // TODO: remove
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[]) 
 {
-    if (argc >= 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h")) == 0)
-    {
+    if (argc >= 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h")) == 0) {
         printf("Usage: cm2lc <sourcefile>\n");
         return 0;
     }
     
     FILE *source_file = fopen(argv[1], "rb");
-    if (source_file == NULL)
-    {
+    if (source_file == NULL) {
         perror("Error opening file");
         return 1;
     }
@@ -31,8 +29,7 @@ int main(int argc, char* argv[])
     char *source_code = malloc(file_size + 1);
 
     size_t read_size = fread(source_code, 1, file_size, source_file);
-    if ((long)read_size != file_size)
-    {
+    if ((long)read_size != file_size) {
         perror("Error reading source file");
         free(source_code);
         return 1;
@@ -51,8 +48,7 @@ int main(int argc, char* argv[])
     debug_printf("main.c: Finished ir processing\n");
 
     FILE *compiled = fopen(argv[2], "wb");
-    if (compiled == NULL)
-    {
+    if (compiled == NULL) {
         perror("Error writing compiled to file");
         return 1;
     }

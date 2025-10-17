@@ -15,4 +15,4 @@ compile:
 	$(CC) $(CCFLAGS) $(SRC) -o $(BUILD_DIR)cm2lc
 
 run:
-	./build/cm2lc examples/example.cm2l build/compiled.ir
+	./build/cm2lc examples/example.cm2l build/compiled.s

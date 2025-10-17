@@ -11,12 +11,8 @@ typedef enum {
     TOKEN_R_BRACE,
 
     // data types, also a noreturn for syntactic sugar
-    TOKEN_U8,
-    TOKEN_U16,
-    TOKEN_U32,
-    TOKEN_S8,
-    TOKEN_S16,
-    TOKEN_S32,
+    TOKEN_V16,
+    TOKEN_V32,
     TOKEN_VOID,
     
     TOKEN_FN,
@@ -28,6 +24,9 @@ typedef enum {
     
     TOKEN_PLUS,
     TOKEN_MINUS,
+    TOKEN_BITWISE_AND,
+    TOKEN_BITWISE_OR,
+    TOKEN_BITWISE_XOR,
 
     TOKEN_NAME,        // variable/function names
     TOKEN_NUMBER,      // numeric literals

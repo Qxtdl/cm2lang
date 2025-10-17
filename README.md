@@ -8,3 +8,4 @@ cm2l is a programming language designed to run on all CM2 CPU's.
 - [ ] Make IR codegen
 - [ ] Add preprocessing (like #include)
 - [ ] Make language in which CPU designers describe their CPU isa so that IR can be ported automatically
+- [ ] Add compiler flags

@@ -1,5 +1,4 @@
 fn noreturn main (noparam) {
-    u8 x = 69 + 42 + 1;
-    u8 y = 1;
-    u8 z = x + y;
+    v16 x = 1 + 2;
+    v16 y = 3 + 4;
 }

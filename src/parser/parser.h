@@ -61,5 +61,6 @@ typedef struct ast_node {
 
 void parser_process(void);
 ast_node_t *ast_walk(ast_node_ptr_t *ptr);
+ast_node_t *ast_peek(ast_node_ptr_t *ptr, int offset);
 
 #endif // PARSER_H
