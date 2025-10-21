@@ -58,12 +58,12 @@ ast_node_t *ast_peek(ast_node_ptr_t *ptr, int offset)
 }
 
 typedef enum {
-    PARSE_GLOBAL,
-    PARSE_FUNCTION,
-    PARSE_FUNCTION_PARAMS,
-    PARSE_BLOCK,
-    PARSE_VAR,
-    PARSE_VAR_INIT
+    PARSE_GLOBAL,           // 0
+    PARSE_FUNCTION,         // 1
+    PARSE_FUNCTION_PARAMS,  // 2
+    PARSE_BLOCK,            // 3
+    PARSE_VAR,              // 4
+    PARSE_VAR_INIT          // 5
 } parser_context_t;
     
 size_t context_stack_size = 0;
@@ -72,6 +72,9 @@ parser_context_t current_context;
 
 static void push_context(parser_context_t context)
 {
+    //DBG//
+    //debug_printf("%d\n", context);
+    //DBG//
     context_sp = realloc(context_sp, sizeof(parser_context_t) * (context_stack_size + 1));
     context_sp[context_stack_size++] = context;
     current_context = context;
@@ -107,6 +110,10 @@ void parser_process(void)
         token_t token = lexer_read_token(&parser_continue);
         if (!parser_continue) break;
 
+        //DBG//
+        //debug_printf("TOKEN: %s\n", token.value);
+        //DBG//
+
         switch (token.type) {
         case TOKEN_FN:
             push_context(PARSE_FUNCTION);
@@ -117,8 +124,7 @@ void parser_process(void)
             push_context(PARSE_BLOCK);
             last_created_block_nodes = &last_created_node_eligible_for_block->node_union.fn_node.body; // TODO: REMOVE, VERY TEMPORARY
             break;
-        case TOKEN_R_BRACE:
-            pop_context(); break;
+        case TOKEN_R_BRACE: pop_context(); break;
         case TOKEN_NORETURN:
             insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, 
                 create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {"noreturn"}}}));
@@ -147,6 +153,7 @@ void parser_process(void)
                     create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 push_context(PARSE_VAR);
                 break;
+            default: abort("parser_process()", "default hit in TOKEN_VARIABLE")
             }
             break;
         case TOKEN_NAME:
@@ -164,9 +171,19 @@ void parser_process(void)
                 insert_ast_node(&last_created_expr_node->node_union.expr_node.ops,
                     create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 break;
+            case PARSE_BLOCK:
+                insert_ast_node(&last_created_node_eligible_for_block->node_union.fn_node.body, 
+                    create_ast_node(true, (ast_node_t){NODE_VARDECL, {.vardecl_node = {0}}}));
+                insert_ast_node(&last_created_var_node->node_union.vardecl_node.name, 
+                    create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
+                last_created_var_node->node_union.vardecl_node.is_preexisting = true;
+                push_context(PARSE_VAR);
+                break;
+            default: abort("parser_process()", "default hit in TOKEN_NAME")
             }
             break;
         case TOKEN_ASSIGN:
+            // TODO: Not all vars have to be initalized
             push_context(PARSE_VAR_INIT);
             insert_ast_node(&last_created_var_node->node_union.vardecl_node.init, 
                 create_ast_node(true, (ast_node_t){NODE_EXPRESSION, {.expr_node = {0}}}));
@@ -177,16 +194,19 @@ void parser_process(void)
             break;
         case TOKEN_PLUS:
         case TOKEN_MINUS:
+        case TOKEN_BITWISE_AND:
+        case TOKEN_BITWISE_OR:
+        case TOKEN_BITWISE_XOR:
             insert_ast_node(&last_created_expr_node->node_union.expr_node.operator, 
                 create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
             break;
         case TOKEN_SEMICOLON:
             switch (current_context) {
-            case PARSE_VAR_INIT:
-                pop_n_context(2);
-                break;
+            case PARSE_VAR_INIT: pop_n_context(2); break;
+            default: abort("parser_process()", "default hit in TOKEN_SEMICOLON")
             }
             break;
         }
+        //debug_printf("CNTXT: %d\n\n", current_context);
     }
 }

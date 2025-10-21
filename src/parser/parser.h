@@ -36,6 +36,7 @@ typedef struct {
 } fn_node_t;    
 
 typedef struct {
+    bool is_preexisting;
     ast_node_ptr_t type;
     ast_node_ptr_t name;
     ast_node_ptr_t init;

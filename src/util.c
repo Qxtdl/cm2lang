@@ -1,9 +1,11 @@
+#include <string.h>
+
 #include "globals.h"
 #include "util.h"
 
 int s_strcmp(const char *first, const char *second)
 {
-    if (!first || !second) return;
+    if (!first || !second) { abort("s_strcmp()", "first or second are nullptrs") }
     return strcmp(first, second);
 }
 

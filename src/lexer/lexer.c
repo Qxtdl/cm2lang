@@ -94,35 +94,27 @@ while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != ';') \
 bool lexer_next_token()
 {
     lexer_advance_till_non_whitespace
-    
-    if (*lexer_state.current_pos == '\0') 
-    {
+    if (*lexer_state.current_pos == '\0') {
         lexer_push_token(TOKEN_EOF, NULL);
         return false; // no more tokens
     }
-    
-    for (size_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++)
-    {
+    for (size_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++) {
         size_t token_length = strlen(tokens[i]);
         if (token_length > 0 && strncmp(lexer_state.current_pos, tokens[i], token_length) == 0)
         {   
             lexer_push_token(i, token_dup(token_length, lexer_state.current_pos));
             lexer_state.current_pos += token_length;
-            
             return true;
         }
     }
-    
-    if (isdigit(*lexer_state.current_pos))
-    {
+    if (isdigit(*lexer_state.current_pos)) {
         const char *digit_start = lexer_state.current_pos;
         lexer_advance_till_whitespace_or_semicolon
         const char *digit_end = lexer_state.current_pos;
         size_t digit_length = digit_end - digit_start;
         lexer_push_token(TOKEN_NUMBER, token_dup(digit_length, digit_start));
     }
-    else
-    {
+    else {
         const char *name_start = lexer_state.current_pos;
         lexer_advance_till_whitespace_or_semicolon
         const char *name_end = lexer_state.current_pos;
@@ -140,11 +132,9 @@ token_t lexer_read_token(bool *ir_continue)
 {
     if (current_token == NULL)
         current_token = lexer_state.current_token;
-
     if (++times_read >= lexer_state.tokens_size / sizeof(token_t))
         *ir_continue = false;
     else
         *ir_continue = true;
-    
     return *current_token++;
 }

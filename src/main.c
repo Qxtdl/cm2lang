@@ -7,10 +7,21 @@
 #include "parser/parser.h"
 #include "ir/ir.h"
 
-extern struct ir_state_s ir_state; // TODO: remove
+extern struct ir_state_s ir_state;
+
+int g_argc;
+char **g_argv;
+
+void compiler_warn(const char *message)
+{
+    printf("[WARNING]: %s\n", message);
+}
 
 int main(int argc, char* argv[]) 
 {
+    g_argc = argc;
+    g_argv = argv;
+    
     if (argc >= 2 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h")) == 0) {
         printf("Usage: cm2lc <sourcefile>\n");
         return 0;
