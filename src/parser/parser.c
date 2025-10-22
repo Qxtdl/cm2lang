@@ -90,7 +90,7 @@ static parser_context_t pop_context(void)
 
 static parser_context_t pop_n_context(size_t n)
 {
-    parser_context_t popped;
+    parser_context_t popped = 0;
     for (size_t i = 0; i < n; i++) {
         popped = context_sp[--context_stack_size - 1];
         context_sp = realloc(context_sp, sizeof(parser_context_t) * context_stack_size);
@@ -102,7 +102,7 @@ static parser_context_t pop_n_context(size_t n)
 void parser_process(void)
 {   
     push_context(PARSE_GLOBAL);
-    program_node = create_ast_node(true, (ast_node_t){NODE_PROGRAM, {.program_node = {0}}});
+    program_node = create_ast_node(true, (ast_node_t){NODE_PROGRAM, {.program_node = {{0}}}});
     
     bool parser_continue = true;
     while (parser_continue)
@@ -118,7 +118,7 @@ void parser_process(void)
         case TOKEN_FN:
             push_context(PARSE_FUNCTION);
             insert_ast_node(&program_node->node_union.program_node.body, 
-                create_ast_node(true, (ast_node_t){NODE_FUNCTION, {.fn_node = {0}}})); 
+                create_ast_node(true, (ast_node_t){NODE_FUNCTION, {.fn_node = {{0}}}})); 
             break;
         case TOKEN_L_BRACE:
             push_context(PARSE_BLOCK);
@@ -186,7 +186,7 @@ void parser_process(void)
             // TODO: Not all vars have to be initalized
             push_context(PARSE_VAR_INIT);
             insert_ast_node(&last_created_var_node->node_union.vardecl_node.init, 
-                create_ast_node(true, (ast_node_t){NODE_EXPRESSION, {.expr_node = {0}}}));
+                create_ast_node(true, (ast_node_t){NODE_EXPRESSION, {.expr_node = {{0}}}}));
             break;
         case TOKEN_NUMBER:
             insert_ast_node(&last_created_expr_node->node_union.expr_node.ops, 

@@ -44,14 +44,10 @@ static const char * const ir_inst[] = {
 #define IR_T1 3
 #define IR_T2 4
 
-static const char * const ir_registers[] = {
-    [0] = "x0", // zero
-    [1] = "x1", // sp (points to half)
-    [2] = "x2", // t0
-    [3] = "x3", // t1
-    [4] = "x4", // t2
-    [5] = "x5", // t3
-};
+typedef struct {
+    const char *const name;
+    bool busy;
+} ir_register_t;
 
 void ir_init(void);
 void ir_process(void);

@@ -16,7 +16,8 @@
 const char * const cflags[] = {
     "-fverbose-asm",
     "-fstack-init",
-    "-fram-mask"
+    "-fram-mask",
+    "-fasm-comment"
 };
 
 bool is_cflag_enabled(const char *cflag)
