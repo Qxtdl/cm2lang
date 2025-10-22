@@ -126,6 +126,7 @@ static void free_reg(const char *name)
 
 extern void compiler_warn(const char *message);
 
+[[nodiscard]]
 static bool ir_process_function(ast_node_t *fn_node)
 {
     if (!fn_node) return false;
