@@ -6,7 +6,7 @@
 
 #define debug_printf(...) printf(__VA_ARGS__)
 
-#define abort(func_name, reasson, ...) \
+#define app_abort(func_name, reasson, ...) \
 fprintf(stderr, "[ABORT]: %s:" func_name ":%d: " reasson "\n", __FILE_NAME__, __LINE__, ##__VA_ARGS__); \
 exit(1);
 

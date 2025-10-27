@@ -4,9 +4,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-struct ir_state_s {
+struct ir_state {
     char *compiled;
-    const char *current_sp;
     size_t compiled_len;
 };
 
@@ -22,20 +21,24 @@ struct ir_state_s {
 #define IR_LH 9
 #define IR_SH 10
 #define IR_BEQ 11
+#define IR_CALL 12
+#define IR_RET 13
 
 static const char * const ir_inst[] = {
-    [IR_NOP]    =  "nop",
-    [IR_LDI]    =  "ldi",
-    [IR_ADD]    =  "add",
-    [IR_SUB]    =  "sub",
-    [IR_AND]    =  "and",
-    [IR_OR]     =  "or",
-    [IR_XOR]    =  "xor",
-    [IR_SHR]    =  "shr",
-    [IR_SHL]    =  "shl",
-    [IR_LH]     =  "lh",
-    [IR_SH]     =  "sh",
-    [IR_BEQ]    =  "beq"
+    [IR_NOP]    = "nop",
+    [IR_LDI]    = "ldi",
+    [IR_ADD]    = "add",
+    [IR_SUB]    = "sub",
+    [IR_AND]    = "and",
+    [IR_OR]     = "or",
+    [IR_XOR]    = "xor",
+    [IR_SHR]    = "shr",
+    [IR_SHL]    = "shl",
+    [IR_LH]     = "lh",
+    [IR_SH]     = "sh",
+    [IR_BEQ]    = "beq",
+    [IR_CALL]   = "call",
+    [IR_RET]    = "ret"
 };
 
 #define IR_ZERO 0

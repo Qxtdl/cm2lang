@@ -8,10 +8,12 @@
 #include "lexer.h"
 
 const char *tokens[] = {
-    "(",        // TOKEN_L_BRACE
-    ")",        // TOKEN_R_BRACE
-    "{",        // TOKEN_L_PARAN
-    "}",        // TOKEN_R_PARAN
+    "{",        // TOKEN_L_BRACE
+    "}",        // TOKEN_R_BRACE
+    "(",        // TOKEN_L_PAREN
+    ")",        // TOKEN_R_PAREN
+    "\"",       // TOKEN_QUOTE
+    "//",       // TOKEN_COMMENT
 
     "v16",      // TOKEN_V16
     "v32",      // TOKEN_V32
@@ -20,6 +22,10 @@ const char *tokens[] = {
     "fn",       // TOKEN_FN
     "noreturn", // TOKEN_NORETURN
     "noparam",  // TOKEN_NORETURN
+
+    "if",       // TOKEN_IF
+
+    "asm",      // TOKEN_ASM
 
     "=",        // TOKEN_ASSIGN
     ";",        // TOKEN_SEMICOLON
@@ -30,8 +36,9 @@ const char *tokens[] = {
     "|",        // TOKEN_BITWISE_OR
     "^",        // TOKEN_BITWISE_XOR
 
-    "",         // TOKEN_NAME (UNUSED)
+    "",         // TOKEN_NAME       (UNUSED)
     "",         // TOKEN_NUMBER     (UNUSED)
+    "",         // TOKEN_STRING     (UNUSED)
 
     ""          // TOKEN_EOF        (UNUSED)
 };
@@ -53,19 +60,11 @@ void lexer_init(const char *source)
 
 static void lexer_push_token(token_type_t type, char *token_value)
 {
-    if (lexer_state.current_token == NULL)
-    lexer_state.current_token = (token_t *)malloc(sizeof(token_t));
-    else
-    lexer_state.current_token = (token_t *)realloc(lexer_state.current_token, lexer_state.tokens_size + sizeof(token_t));
+    lexer_state.current_token = realloc(lexer_state.current_token, lexer_state.tokens_size + sizeof(token_t));
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].type = type;
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value = token_value;
-    if (type == TOKEN_EOF)
-        debug_printf("EOF\n");
-    if (lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value)
-        debug_printf("%s\n", lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value);
-
     lexer_state.tokens_size += sizeof(token_t);
-}   
+}
 
 static char *token_dup(size_t token_len, const char *token)
 {
@@ -80,16 +79,20 @@ while (*lexer_state.current_pos != '\0' && isspace(*lexer_state.current_pos)) \
     lexer_state.current_pos++;
 
 #define lexer_advance_till_whitespace \
-while (*lexer_state.current_pos != '\0' && !isspace(*lexer_state.current_pos)) \
+while (*lexer_state.current_pos != '\0' && !isspace(*lexer_state.current_pos) && !ispunct(*lexer_state.current_pos)) \
     lexer_state.current_pos++;
 
 #define lexer_advance_till_whitespace_or_semicolon \
-while (*lexer_state.current_pos != '\0' && !isspace(*lexer_state.current_pos) && *lexer_state.current_pos != ';') \
+while (*lexer_state.current_pos != '\0' && !isspace(*lexer_state.current_pos) &&  !ispunct(*lexer_state.current_pos) && *lexer_state.current_pos != ';') \
     lexer_state.current_pos++;
 
 #define lexer_advance_till_semicolon \
 while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != ';') \
     lexer_state.current_pos++;
+
+#define lexer_advance_till_quotes \
+while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != '\"') \
+    lexer_state.current_pos++;    
 
 [[nodiscard]]
 bool lexer_next_token(void)
@@ -107,6 +110,15 @@ bool lexer_next_token(void)
             lexer_state.current_pos += token_length;
             return true;
         }
+    }
+    if (*lexer_state.current_pos == '\"') {
+        const char *string_start = ++lexer_state.current_pos;
+        lexer_advance_till_quotes
+        const char *string_end = lexer_state.current_pos;
+        size_t string_length = string_end - string_start;
+        lexer_push_token(TOKEN_STRING, token_dup(string_length, string_start));
+        lexer_state.current_pos++;  // Because we reached the closing ", we increment by 1 character to continue lexing.
+        return true;
     }
     if (isdigit(*lexer_state.current_pos)) {
         const char *digit_start = lexer_state.current_pos;
@@ -129,13 +141,13 @@ bool lexer_next_token(void)
 static token_t *current_token = NULL;
 static size_t times_read = 0;
 
-token_t lexer_read_token(bool *ir_continue)
+token_t lexer_read_token(bool *parser_continue)
 {
     if (current_token == NULL)
         current_token = lexer_state.current_token;
     if (++times_read >= lexer_state.tokens_size / sizeof(token_t))
-        *ir_continue = false;
+        *parser_continue = false;
     else
-        *ir_continue = true;
+        *parser_continue = true;
     return *current_token++;
 }

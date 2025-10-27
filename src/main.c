@@ -7,7 +7,7 @@
 #include "parser/parser.h"
 #include "ir/ir.h"
 
-extern struct ir_state_s ir_state;
+extern struct ir_state ir_state;
 
 int g_argc;
 char **g_argv;
@@ -50,13 +50,9 @@ int main(int argc, char* argv[])
 
     lexer_init(source_code);
     while (lexer_next_token());
-    debug_printf("main.c: Finished lexing\n");
     parser_process();
-    debug_printf("main.c: Finished parser processing\n");
     ir_init();
-    debug_printf("main.c: Finished ir initalization\n");
     ir_process();
-    debug_printf("main.c: Finished ir processing\n");
 
     FILE *compiled = fopen(argv[2], "wb");
     if (compiled == NULL) {

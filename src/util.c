@@ -5,7 +5,7 @@
 
 int s_strcmp(const char *first, const char *second)
 {
-    if (!first || !second) { abort("s_strcmp()", "first or second are nullptrs") }
+    if (!first || !second) { app_abort("s_strcmp()", "first or second are nullptrs") }
     return strcmp(first, second);
 }
 

@@ -23,6 +23,9 @@ static ast_node_t *create_ast_node(bool replace_last_created_node, ast_node_t in
         last_created_node = node;
     }
     switch (initalizer_node.type) {
+    case NODE_PROGRAM:
+        program_node = node;
+        break;
     case NODE_FUNCTION:
         last_created_fn_node = node, last_created_node_eligible_for_block = node;
         break;
@@ -72,9 +75,6 @@ parser_context_t current_context;
 
 static void push_context(parser_context_t context)
 {
-    //DBG//
-    //debug_printf("%d\n", context);
-    //DBG//
     context_sp = realloc(context_sp, sizeof(parser_context_t) * (context_stack_size + 1));
     context_sp[context_stack_size++] = context;
     current_context = context;
@@ -102,7 +102,7 @@ static parser_context_t pop_n_context(size_t n)
 void parser_process(void)
 {   
     push_context(PARSE_GLOBAL);
-    program_node = create_ast_node(true, (ast_node_t){NODE_PROGRAM, {.program_node = {{0}}}});
+    create_ast_node(true, (ast_node_t){NODE_PROGRAM, {.program_node = {{0}}}});
     
     bool parser_continue = true;
     while (parser_continue)
@@ -110,11 +110,9 @@ void parser_process(void)
         token_t token = lexer_read_token(&parser_continue);
         if (!parser_continue) break;
 
-        //DBG//
-        //debug_printf("TOKEN: %s\n", token.value);
-        //DBG//
-
         switch (token.type) {
+
+        // TODO: Remove {0} initalizers and don't use them instead. See if it works...
         case TOKEN_FN:
             push_context(PARSE_FUNCTION);
             insert_ast_node(&program_node->node_union.program_node.body, 
@@ -134,12 +132,18 @@ void parser_process(void)
                 create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {"noparam"}}}));
             pop_n_context(2);
             break;
+        case TOKEN_IF:
+            debug_printf("Got TOKEN_IF\n");
+            break;
+        case TOKEN_ASM:
+            debug_printf("Got TOKEN_ASM\n");
+            break;            
         case TOKEN_V16:
         case TOKEN_V32:
             switch (current_context) {
             case PARSE_FUNCTION:
-                insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, create_ast_node(
-                    true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
+                insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, 
+                    create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 break;
             case PARSE_FUNCTION_PARAMS:
                 insert_ast_node(&last_created_fn_node->node_union.fn_node.params,
@@ -153,7 +157,7 @@ void parser_process(void)
                     create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 push_context(PARSE_VAR);
                 break;
-            default: abort("parser_process()", "default hit in TOKEN_VARIABLE")
+            default: app_abort("parser_process()", "default hit in TOKEN_VARIABLE")
             }
             break;
         case TOKEN_NAME:
@@ -179,7 +183,7 @@ void parser_process(void)
                 last_created_var_node->node_union.vardecl_node.is_preexisting = true;
                 push_context(PARSE_VAR);
                 break;
-            default: abort("parser_process()", "default hit in TOKEN_NAME")
+            default: app_abort("parser_process()", "default hit in TOKEN_NAME")
             }
             break;
         case TOKEN_ASSIGN:
@@ -203,10 +207,9 @@ void parser_process(void)
         case TOKEN_SEMICOLON:
             switch (current_context) {
             case PARSE_VAR_INIT: pop_n_context(2); break;
-            default: abort("parser_process()", "default hit in TOKEN_SEMICOLON")
+            default: app_abort("parser_process()", "default hit in TOKEN_SEMICOLON")
             }
             break;
         }
-        //debug_printf("CNTXT: %d\n\n", current_context);
     }
 }

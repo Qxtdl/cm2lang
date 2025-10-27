@@ -5,10 +5,12 @@
 
 typedef enum {
     // braces and parantheses
-    TOKEN_L_PARAN,
-    TOKEN_R_PARAN,
     TOKEN_L_BRACE,
     TOKEN_R_BRACE,
+    TOKEN_L_PARAN,
+    TOKEN_R_PARAN,
+    TOKEN_QUOTE,
+    TOKEN_COMMENT,
 
     // data types, also a noreturn for syntactic sugar
     TOKEN_V16,
@@ -18,6 +20,10 @@ typedef enum {
     TOKEN_FN,
     TOKEN_NORETURN,
     TOKEN_NOPARAM,
+
+    TOKEN_IF,
+
+    TOKEN_ASM,
 
     TOKEN_ASSIGN,
     TOKEN_SEMICOLON,
@@ -30,17 +36,18 @@ typedef enum {
 
     TOKEN_NAME,        // variable/function names
     TOKEN_NUMBER,      // numeric literals
+    TOKEN_STRING,
     
     TOKEN_EOF          // end of input
 } token_type_t;
 
 typedef struct {
     token_type_t type;
-    char *value;
+    const char *value;
 } token_t;
 
 void lexer_init(const char *source);
 bool lexer_next_token(void);
-token_t lexer_read_token(bool *ir_continue);
+token_t lexer_read_token(bool *parser_continue);
 
 #endif // LEXER_H

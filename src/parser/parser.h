@@ -1,7 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "../lexer/lexer.h"
+#include <stdlib.h>
 
 typedef enum node_type {
     NODE_PROGRAM,
@@ -61,6 +61,7 @@ typedef struct ast_node {
 } ast_node_t;
 
 void parser_process(void);
+
 ast_node_t *ast_walk(ast_node_ptr_t *ptr);
 ast_node_t *ast_peek(ast_node_ptr_t *ptr, int offset);
 

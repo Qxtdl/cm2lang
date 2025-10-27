@@ -8,17 +8,13 @@
 /*
  * TODO: Compiler flags
  *
- * [x] -fverbose-asm    Compiler comments
- * [x] -fstack-init     Value to initalize stack to
- * [ ] -fram-mask       RAM masks
+ * [x] -fverbose-asm        Compiler comments
+ * [x] -fstack-init         Value to initalize stack to
+ * [ ] -fram-mask           RAM masks
+ * [x] -fasm-comment        Comment for assembly
+ * [ ] -fhalf-size          How big a 16 bit value is in terms of address space
+ * [x] -fno-init-zero-reg   Initalize zero reg to zero incase it's not hardwired to be zero
 */
-
-const char * const cflags[] = {
-    "-fverbose-asm",
-    "-fstack-init",
-    "-fram-mask",
-    "-fasm-comment"
-};
 
 bool is_cflag_enabled(const char *cflag)
 {
