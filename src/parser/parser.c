@@ -49,7 +49,6 @@ ast_node_t *ast_walk(ast_node_ptr_t *ptr)
 {
     if (ptr->times_walked < ptr->num_children)
         return ptr->ast_nodes[ptr->times_walked++];
-    // Walked too many times
     return NULL;
 }
 

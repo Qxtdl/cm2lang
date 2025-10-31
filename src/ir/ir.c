@@ -26,7 +26,7 @@ strcat(ir_state.compiled, src);
 static void add_label(const char *name)
 {
     r_strcat(name);
-    r_strcat(":\r")
+    r_strcat(":\n")
 }
 
 static void emit(
@@ -35,7 +35,7 @@ static void emit(
     const char *operand,
     const char *operand2,
     const char *comment
-    // MIGHT DO: variable args for better comments
+    // MODO: variable args for better comments
 )
 {
     r_strcat("\t")
@@ -70,10 +70,11 @@ typedef struct {
     int address;
 } var_entry_t;
 
-static int cpu_stack_pointer;
 
 size_t var_entry_stack_size = 0;
 var_entry_t *var_entry_sp = NULL;
+
+static int cpu_stack_pointer;
 
 static var_entry_t *push_var(const char *identifier, const char *type)
 {
@@ -205,7 +206,7 @@ static bool ir_process_globals(ast_node_t *global_node)
                     else {
                         const char *reg_op_var_addr;
                         emit(ir_inst[IR_LDI], reg_op_var_addr = alloc_reg().name, 
-                        itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, "Load op var addr");
+                        itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, "Load op var addr");
                         emit(ir_inst[IR_LH], reg_imm = alloc_reg().name, reg_op_var_addr, NULL, "Load var");
                         free_reg(reg_op_var_addr);
                     }
@@ -238,8 +239,6 @@ static bool ir_process_globals(ast_node_t *global_node)
         }
         emit(ir_inst[IR_RET], NULL, NULL, NULL, NULL);
     }
-    
-    
     return true;
 }
 
