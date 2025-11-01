@@ -8,6 +8,7 @@
 ast_node_t *program_node = NULL;
 ast_node_t *cpu_section_node = NULL;
 ast_node_t *instructions_section_node = NULL;
+ast_node_t *registers_section_node = NULL;
 ast_node_t *last_created_section_node = NULL;
 ast_node_t *last_created_node = NULL;
 ast_node_ptr_t *last_created_block_nodes = NULL;
@@ -59,7 +60,8 @@ typedef enum {
     PARSE_GLOBAL,
     PARSE_CPU_SECTION_NAME,
     PARSE_INSTRUCTIONS_SECTION,
-    PARSE_ASMDECL
+    PARSE_REGISTERS_SECTION,
+    PARSE_ASMDECL // this one is also reused for the registers section
 } parser_context_t;
     
 size_t context_stack_size = 0;
@@ -116,6 +118,13 @@ void parser_process(void)
                 create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {"instructions"}}}));
             push_context(PARSE_INSTRUCTIONS_SECTION);
             break;
+        case TOKEN_REGISTERS_SECTION:
+            insert_ast_node(&cpu_section_node->node_union.section_node.body,
+                (registers_section_node = create_ast_node(true, (ast_node_t){NODE_SECTION, {{{0}}}})));
+            insert_ast_node(&last_created_section_node->node_union.section_node.type, 
+                create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {"registers"}}}));
+            push_context(PARSE_REGISTERS_SECTION);
+            break;
         case TOKEN_STRING:
             switch (current_context) {
             case PARSE_CPU_SECTION_NAME:
@@ -124,7 +133,8 @@ void parser_process(void)
                 pop_context();
                 break;
             case PARSE_ASMDECL:
-                insert_ast_node(&last_created_node->node_union.asmdecl_node.value, create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
+                insert_ast_node(&last_created_node->node_union.asmdecl_node.value, 
+                    create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 pop_context();
                 break;
             }
@@ -134,9 +144,16 @@ void parser_process(void)
             case PARSE_INSTRUCTIONS_SECTION:
                 insert_ast_node(&instructions_section_node->node_union.section_node.body, 
                     create_ast_node(true, (ast_node_t){NODE_ASMDECL, {{{0}}}}));
-                insert_ast_node(&last_created_node->node_union.asmdecl_node.name, create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
+                insert_ast_node(&last_created_node->node_union.asmdecl_node.name, 
+                    create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 push_context(PARSE_ASMDECL);
                 break;
+            case PARSE_REGISTERS_SECTION:
+                insert_ast_node(&registers_section_node->node_union.section_node.body, 
+                    create_ast_node(true, (ast_node_t){NODE_ASMDECL, {{{0}}}}));
+                insert_ast_node(&last_created_node->node_union.asmdecl_node.name, 
+                    create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
+                push_context(PARSE_ASMDECL);
             }
             break;
         case TOKEN_SEMICOLON:

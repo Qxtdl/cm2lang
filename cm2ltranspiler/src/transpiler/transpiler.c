@@ -49,10 +49,10 @@ static asm_line_t get_asm_line(bool *get_asm_line_continue)
    } else {
       asm_line.is_label = false;
       char *asm_token = token;
-      asm_line.opcode = (asm_token = strtok(asm_token, " "));
-      asm_line.rd = (asm_token = strtok(NULL, " "));
-      asm_line.rs1 = (asm_token = strtok(NULL, ","));
-      asm_line.rs2 = (asm_token = strtok(NULL, ","));
+      asm_line.opcode = asm_token = strtok(asm_token, " ");
+      asm_line.rd = asm_token = strtok(NULL, " ");
+      asm_line.rs1 = asm_token = strtok(NULL, ",");
+      asm_line.rs2 = asm_token = strtok(NULL, ", ");
       asm_line.opcode = strtok(asm_line.opcode, "\t");
       strtok(asm_line.rd, ",");
    }
@@ -65,39 +65,9 @@ if (src) { \
    transpiler_state.transpiled = realloc(transpiler_state.transpiled, strlen(transpiler_state.transpiled) + strlen((src)) + 1); \
    strcat(transpiler_state.transpiled, (src)); }
 
-static void add_label(const char *name)
-{
-    r_strcat(name);
-    r_strcat("\n")
-}
+extern ast_node_t *registers_section_node;
 
-static void emit(
-    const char *opcode,
-    const char *dest,
-    const char *operand,
-    const char *operand2
-)
-{
-    r_strcat("\t")
-    r_strcat(opcode)
-    r_strcat(" ")
-    if (dest) {
-        r_strcat(dest)
-        r_strcat(", ")
-    }
-    if (operand) {
-        r_strcat(operand)
-        r_strcat(operand2 ? ", " : "")
-    }
-    if (operand2) {
-        r_strcat(operand2)
-    }
-    r_strcat("\n");
-}
-
-ast_node_t *registers_section;
-
-static const char *mk_operand(asm_line_t asm_inst, char *operand)
+static const char *mk_operand(asm_line_t asm_inst, const char *operand)
 {
    if (!operand) return operand;
 
@@ -109,7 +79,10 @@ static const char *mk_operand(asm_line_t asm_inst, char *operand)
    else if (!strcmp(operand, "rs2") || !strcmp(operand, "imm2"))
       evaluated_operand = asm_inst.rs2;
    else evaluated_operand = operand;
-   
+   ast_node_t *vardecl_node;
+   while ((vardecl_node = ast_see(&registers_section_node->node_union.section_node.body)))
+      if (!strcmp(vardecl_node->node_union.asmdecl_node.name.ast_nodes[0]->node_union.name_node.value, evaluated_operand))
+         evaluated_operand = vardecl_node->node_union.asmdecl_node.value.ast_nodes[0]->node_union.name_node.value;
    return evaluated_operand;
 }
 
@@ -122,9 +95,7 @@ static bool transpiler_process_globals(ast_node_t *global_node)
       if (!strcmp(global_node->node_union.section_node.type.ast_nodes[0]->node_union.name_node.value, "cpu")) {
          ast_node_t *subsection_node;
          while ((subsection_node = ast_walk(&global_node->node_union.section_node.body))) {
-            if (!strcmp(subsection_node->node_union.section_node.type.ast_nodes[0]->node_union.name_node.value, "registers"))
-               registers_section = subsection_node;
-            else if (!strcmp(subsection_node->node_union.section_node.type.ast_nodes[0]->node_union.name_node.value, "instructions"))
+            if (!strcmp(subsection_node->node_union.section_node.type.ast_nodes[0]->node_union.name_node.value, "instructions"))
             {
                bool get_asm_line_continue;
                asm_line_t asm_line;
@@ -152,9 +123,10 @@ static bool transpiler_process_globals(ast_node_t *global_node)
                         r_strcat(rs1);
                         rest = strtok(NULL, "#");
                         r_strcat(rest);
-                        char *rs2 = strtok(mk_operand(asm_line, strtok(NULL, "#")), " ");
+                        char *rs2 = mk_operand(asm_line, strtok(NULL, "#"));
                         r_strcat(rs2);
                         r_strcat("\n");
+                        free(inst); // stop leaksanitizer from complaining
                      }
                   }
                }

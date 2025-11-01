@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     
     FILE *source_file = fopen(argv[1], "rb");
     if (source_file == NULL) {
-        perror("Error opening file");
+        app_abort("main()", "Failed to open a file handle to %s", argv[1])
         return 1;
     }
 
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 
     size_t read_size = fread(source_code, 1, file_size, source_file);
     if ((long)read_size != file_size) {
-        perror("Error reading source file");
+        app_abort("main()", "Error reading this file: %s", argv[1])
         free(source_code);
         return 1;
     }
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 
     FILE *compiled = fopen(argv[2], "wb");
     if (compiled == NULL) {
-        perror("Error writing compiled to file");
+        app_abort("main()", "Error writing the compiled binary to this file: %s", argv[2])
         return 1;
     }
     

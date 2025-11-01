@@ -37,15 +37,13 @@ const char *get_cflag_value(const char *cflag)
             while (*value != '=') value++;
             return ++value;
         }
-    if (!strcmp(cflag, cflags[FLAG_STACK_INIT]))
-    {
+    if (!strcmp(cflag, cflags[FLAG_STACK_INIT])) {
         compiler_warn("This message may be printed repeatedly! You did not provide -fstack-init flag. Defaulting to 0");
         return "0";
     }
-    if (!strcmp(cflag, cflags[FLAG_HALF_SIZE]))
-    {
+    if (!strcmp(cflag, cflags[FLAG_HALF_SIZE])) {
         compiler_warn("This message may be printed repeatedly! You did not provide -fhalf-size flag. Defaulting to 2 (works on byte addressed systems)");        
         return "2";
     }
-    return NULL;
+    app_abort("get_cflag_value()", "Could not provide a flag value for %s", cflag)
 }

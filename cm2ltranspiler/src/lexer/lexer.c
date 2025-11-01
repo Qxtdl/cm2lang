@@ -49,7 +49,6 @@ static void lexer_push_token(token_type_t type, char *token_value)
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].type = type;
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value = token_value;
     lexer_state.tokens_size += sizeof(token_t);
-    debug_printf("%d %s\n", type, token_value);
 }
 
 static char *token_dup(size_t token_len, const char *token)
@@ -80,6 +79,10 @@ while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != ';') \
 while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != '\"') \
     lexer_state.current_pos++;
 
+#define lexer_advance_till_newline \
+while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != '\n') \
+    lexer_state.current_pos++;    
+
 [[nodiscard]]
 bool lexer_next_token(void)
 {
@@ -93,7 +96,10 @@ bool lexer_next_token(void)
         if (token_length > 0 && strncmp(lexer_state.current_pos, tokens[i], token_length) == 0)
         {   
             lexer_push_token(i, token_dup(token_length, lexer_state.current_pos));
-            lexer_state.current_pos += token_length;
+            if (i == TOKEN_COMMENT) {
+                lexer_advance_till_newline
+            } else
+                lexer_state.current_pos += token_length;
             return true;
         }
     }
