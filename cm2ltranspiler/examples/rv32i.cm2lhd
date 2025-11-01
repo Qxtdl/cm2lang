@@ -1,4 +1,6 @@
 cpu "RV32I" {
+   // Not adding a register def makes the compiler use the default defs
+   // (like x0, x1) but in this case ir has same registers as the RV32I so this transpiles
    instructions {
       ldi   "li #rd#, #imm#"
       add   "add #rd#, #rs1#, #rs2#"

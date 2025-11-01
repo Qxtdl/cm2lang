@@ -36,6 +36,7 @@ static void insert_ast_node(ast_node_ptr_t *ptr, ast_node_t *new_node)
 
 ast_node_t *ast_walk(ast_node_ptr_t *ptr)
 {
+    if (!ptr) return ptr;
     if (ptr->times_walked < ptr->num_children)
         return ptr->ast_nodes[ptr->times_walked++];
     return NULL;
@@ -43,6 +44,7 @@ ast_node_t *ast_walk(ast_node_ptr_t *ptr)
 
 ast_node_t *ast_see(ast_node_ptr_t *ptr)
 {
+    if (!ptr) return ptr;
     if (ptr->times_seen < ptr->num_children)
         return ptr->ast_nodes[ptr->times_seen++];
     ptr->times_seen = 0;
@@ -51,6 +53,7 @@ ast_node_t *ast_see(ast_node_ptr_t *ptr)
 
 ast_node_t *ast_peek(ast_node_ptr_t *ptr, int offset)
 {
+    if (!ptr) return ptr;
     if (ptr->times_walked + offset - 1 < ptr->num_children)
         return ptr->ast_nodes[ptr->times_walked + offset - 1];
     return NULL;
