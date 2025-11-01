@@ -80,7 +80,7 @@ static const char *mk_operand(asm_line_t asm_inst, const char *operand)
       evaluated_operand = asm_inst.rs2;
    else evaluated_operand = operand;
    ast_node_t *vardecl_node;
-   while ((vardecl_node = ast_see(&registers_section_node->node_union.section_node.body)))
+   while (registers_section_node && (vardecl_node = ast_see(&registers_section_node->node_union.section_node.body)))
       if (!strcmp(vardecl_node->node_union.asmdecl_node.name.ast_nodes[0]->node_union.name_node.value, evaluated_operand))
          evaluated_operand = vardecl_node->node_union.asmdecl_node.value.ast_nodes[0]->node_union.name_node.value;
    return evaluated_operand;
