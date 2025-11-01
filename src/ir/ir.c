@@ -82,7 +82,7 @@ static var_entry_t *push_var(const char *identifier, const char *type)
     var_entry_sp[var_entry_stack_size - 1].identifier = identifier;
     var_entry_sp[var_entry_stack_size - 1].type = type;
     if (!strcmp(type, "v16"))
-        var_entry_sp[var_entry_stack_size - 1].address = --cpu_stack_pointer;
+        var_entry_sp[var_entry_stack_size - 1].address = cpu_stack_pointer = cpu_stack_pointer - strtol(get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, 10);
     return var_entry_sp;
 }
 
@@ -125,8 +125,6 @@ static void free_reg(const char *name)
     app_abort("free_reg()", "Failed to free an allocated register. (%s)", name)
 }
 
-extern void compiler_warn(const char *message);
-
 [[nodiscard]]
 static bool ir_process_globals(ast_node_t *global_node)
 {
@@ -141,15 +139,8 @@ static bool ir_process_globals(ast_node_t *global_node)
 
             // -fstack-init
             const char *stack_init = get_cflag_value(cflags[FLAG_STACK_INIT]);
-            if (stack_init) {
-                emit(ir_inst[IR_LDI], ir_registers[IR_SP].name, stack_init, NULL, "Set up stack pointer");
-                cpu_stack_pointer = strtol(stack_init, NULL, 10);
-            }
-            else {
-                compiler_warn("-fstack-init flag was not provided. Defaulting to 65535");
-                emit(ir_inst[IR_LDI], ir_registers[IR_SP].name, "65535", NULL, "Set up stack pointer (default)");
-                cpu_stack_pointer = 65535;
-            }
+            emit(ir_inst[IR_LDI], ir_registers[IR_SP].name, stack_init, NULL, "Set up stack pointer");
+            cpu_stack_pointer = strtol(stack_init, NULL, 10);
         }
 
         ast_node_t *node;
@@ -181,7 +172,7 @@ static bool ir_process_globals(ast_node_t *global_node)
                         if (node->node_union.vardecl_node.is_preexisting == false) {
                             const char *reg_sp_subtrahend = NULL;
                             if (!strcmp(var_type, "v16"))
-                                emit(ir_inst[IR_LDI], reg_sp_subtrahend = alloc_reg().name, "1", NULL, "Load subtrahend for stack pointer (v16)");
+                                emit(ir_inst[IR_LDI], reg_sp_subtrahend = alloc_reg().name, get_cflag_value("-fhalf-size"), NULL, "Load subtrahend for stack pointer (v16)");
                             emit(ir_inst[IR_SUB], ir_registers[IR_SP].name, ir_registers[IR_SP].name, reg_sp_subtrahend, "Manipulate stack pointer");
                             emit(ir_inst[IR_SH], NULL, ir_registers[IR_SP].name, reg_imm, "Save value onto stack");
                             free_reg(reg_sp_subtrahend);

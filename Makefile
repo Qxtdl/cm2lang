@@ -14,6 +14,8 @@ clean:
 compile:
 	$(CC) $(CCFLAGS) $(WARNINGS) $(SRC) -o $(BUILD_DIR)cm2lc
 
-CM2LCFLAGS = -fverbose-asm
+CM2LCFLAGS = -fstack-init=0 -fhalf-size=2
+CM2LTFLAGS =
 run:
 	./build/cm2lc examples/example.cm2l build/compiled.s $(CM2LCFLAGS)
+	./build/cm2lt cm2ltranspiler/examples/rv32i.cm2lhd build/compiled.s build/transpiled.s $(CM2LTFLAGS)

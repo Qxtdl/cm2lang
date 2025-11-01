@@ -1,0 +1,13 @@
+cpu "RV32I" {
+   instructions {
+      ldi   "li #rd#, #imm#"
+      add   "add #rd#, #rs1#, #rs2#"
+      sub   "sub #rd#, #rs1#, #rs2#"
+      and   "and #rd#, #rs1#, #rs2#"
+      or    "or #rd#, #rs1#, #rs2#"
+      xor   "xor #rd#, #rs1#, #rs2#"
+      shr   "shr #rd#, #rs1#, 1"
+      lh    "lh #rd#, 0(#rs1#)"
+      sh    "sh #rs1#, 0(#rd#)"
+   }
+}
