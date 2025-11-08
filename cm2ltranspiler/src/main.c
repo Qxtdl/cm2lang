@@ -12,7 +12,7 @@ char **g_argv;
 
 void compiler_warn(const char *message)
 {
-    printf("[WARNING]: %s\n", message);
+   printf("[WARNING]: %s\n", message);
 }
 
 static const char *read_file(const char *filepath)

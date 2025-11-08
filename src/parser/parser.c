@@ -14,6 +14,7 @@ ast_node_t *last_created_expr_node = NULL;
 ast_node_t *last_created_node_eligible_for_block = NULL;
 ast_node_t *last_created_node = NULL;
 ast_node_ptr_t *last_created_block_nodes = NULL;
+ast_node_ptr_t *previous_last_created_block_nodes = NULL;
 
 static ast_node_t *create_ast_node(bool replace_last_created_node, ast_node_t initalizer_node)
 {
@@ -28,6 +29,9 @@ static ast_node_t *create_ast_node(bool replace_last_created_node, ast_node_t in
         break;
     case NODE_FUNCTION:
         last_created_fn_node = node, last_created_node_eligible_for_block = node;
+        break;
+    case NODE_IF_STATEMENT:
+        last_created_node_eligible_for_block = node;
         break;
     case NODE_VARDECL:
         last_created_var_node = node;
@@ -47,13 +51,24 @@ static void insert_ast_node(ast_node_ptr_t *ptr, ast_node_t *new_node)
 
 ast_node_t *ast_walk(ast_node_ptr_t *ptr)
 {
+    if (!ptr) return NULL;
     if (ptr->times_walked < ptr->num_children)
         return ptr->ast_nodes[ptr->times_walked++];
     return NULL;
 }
 
+ast_node_t *ast_see(ast_node_ptr_t *ptr)
+{
+    if (!ptr) return NULL;
+    if (ptr->times_seen < ptr->num_children)
+        return ptr->ast_nodes[ptr->times_seen++];
+    ptr->times_seen = 0;
+    return NULL;
+}
+
 ast_node_t *ast_peek(ast_node_ptr_t *ptr, int offset)
 {
+    if (!ptr) return NULL;
     if (ptr->times_walked + offset - 1 < ptr->num_children)
         return ptr->ast_nodes[ptr->times_walked + offset - 1];
     return NULL;
@@ -65,7 +80,9 @@ typedef enum {
     PARSE_FUNCTION_PARAMS,  // 2
     PARSE_BLOCK,            // 3
     PARSE_VAR,              // 4
-    PARSE_VAR_INIT          // 5
+    PARSE_VAR_INIT,         // 5
+    PARSE_INLINE_ASM,
+    PARSE_IF_STATEMENT
 } parser_context_t;
     
 size_t context_stack_size = 0;
@@ -98,6 +115,18 @@ static parser_context_t pop_n_context(size_t n)
     return popped;
 }
 
+inline void pop_block(void)
+{
+    last_created_block_nodes = previous_last_created_block_nodes;
+    previous_last_created_block_nodes = last_created_block_nodes;
+}
+
+inline void push_block(ast_node_ptr_t *new_block_nodes)
+{
+    previous_last_created_block_nodes = last_created_block_nodes;
+    last_created_block_nodes = new_block_nodes;
+}
+
 void parser_process(void)
 {   
     push_context(PARSE_GLOBAL);
@@ -119,9 +148,12 @@ void parser_process(void)
             break;
         case TOKEN_L_BRACE:
             push_context(PARSE_BLOCK);
-            last_created_block_nodes = &last_created_node_eligible_for_block->node_union.fn_node.body; // TODO: REMOVE, VERY TEMPORARY
+            switch (last_created_node_eligible_for_block->type) {
+                case NODE_FUNCTION: push_block(&last_created_node_eligible_for_block->node_union.fn_node.body); break;
+                case NODE_IF_STATEMENT: push_block(&last_created_node_eligible_for_block->node_union.if_statement_node.body); break;
+            }
             break;
-        case TOKEN_R_BRACE: pop_context(); break;
+        case TOKEN_R_BRACE: pop_block(); pop_context(); break;
         case TOKEN_NORETURN:
             insert_ast_node(&last_created_fn_node->node_union.fn_node.return_type, 
                 create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {"noreturn"}}}));
@@ -132,11 +164,24 @@ void parser_process(void)
             pop_n_context(2);
             break;
         case TOKEN_IF:
-            debug_printf("Got TOKEN_IF\n");
+            insert_ast_node(last_created_block_nodes, create_ast_node(true, (ast_node_t){NODE_IF_STATEMENT, {{{0}}}}));
+            insert_ast_node(&last_created_node->node_union.if_statement_node.condition, 
+                create_ast_node(false, (ast_node_t){NODE_EXPRESSION, {{{0}}}}));
+            push_context(PARSE_IF_STATEMENT);
             break;
         case TOKEN_ASM:
-            debug_printf("Got TOKEN_ASM\n");
-            break;            
+            insert_ast_node(last_created_block_nodes, create_ast_node(true, (ast_node_t){NODE_INLINE_ASM, {{{0}}}}));
+            push_context(PARSE_INLINE_ASM);
+            break;
+        case TOKEN_STRING:
+            switch (current_context) {
+                case PARSE_INLINE_ASM:
+                    insert_ast_node(&last_created_node->node_union.inline_asm_node.inline_asm, 
+                        create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
+                    pop_context();
+                    break;
+            }
+            break;
         case TOKEN_V16:
         case TOKEN_V32:
             switch (current_context) {
@@ -171,11 +216,12 @@ void parser_process(void)
                     create_ast_node(false, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 break;
             case PARSE_VAR_INIT:
+            case PARSE_IF_STATEMENT:
                 insert_ast_node(&last_created_expr_node->node_union.expr_node.ops,
                     create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 break;
             case PARSE_BLOCK:
-                insert_ast_node(&last_created_node_eligible_for_block->node_union.fn_node.body, 
+                insert_ast_node(last_created_block_nodes, 
                     create_ast_node(true, (ast_node_t){NODE_VARDECL, {.vardecl_node = {0}}}));
                 insert_ast_node(&last_created_var_node->node_union.vardecl_node.name, 
                     create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
@@ -200,6 +246,8 @@ void parser_process(void)
         case TOKEN_BITWISE_AND:
         case TOKEN_BITWISE_OR:
         case TOKEN_BITWISE_XOR:
+        case TOKEN_EQUALS:
+        case TOKEN_NOT_EQUALS:
             insert_ast_node(&last_created_expr_node->node_union.expr_node.operator, 
                 create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
             break;

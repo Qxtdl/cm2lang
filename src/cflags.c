@@ -45,5 +45,5 @@ const char *get_cflag_value(const char *cflag)
         compiler_warn("This message may be printed repeatedly! You did not provide -fhalf-size flag. Defaulting to 2 (works on byte addressed systems)");        
         return "2";
     }
-    app_abort("get_cflag_value()", "Could not provide a flag value for %s", cflag)
+    return NULL;
 }

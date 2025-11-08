@@ -9,5 +9,8 @@ cpu "RV32I" {
       shr   "shr #rd#, #rs1#, 1"
       lh    "lh #rd#, 0(#rs1#)"
       sh    "sh #rs1#, 0(#rd#)"
+      jmp   "j #first_label#"
+      beq   "beq #rd#, #rs1#, #label#" // Label is just alias for #rs2#
+      ret   "ret"
    }
 }

@@ -15,3 +15,10 @@ const char *itoa(int n)
     snprintf(buf, sizeof(buf), "%d", n);
     return buf;
 }
+
+char *r_strcat(char *dest, const char *src)
+{
+   if (!dest || !src) return NULL;
+   dest = realloc(dest, strlen(dest) + strlen(src) + 1);
+   return strcat(dest, src);
+}

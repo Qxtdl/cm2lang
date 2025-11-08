@@ -4,12 +4,12 @@
 #include <stdbool.h>
 
 typedef enum {
+    TOKEN_NULL,
     // braces and parantheses
     TOKEN_L_BRACE,
     TOKEN_R_BRACE,
     TOKEN_L_PARAN,
     TOKEN_R_PARAN,
-    TOKEN_QUOTE,
     TOKEN_COMMENT,
 
     // data types, also a noreturn for syntactic sugar
@@ -26,6 +26,8 @@ typedef enum {
     TOKEN_ASM,
 
     TOKEN_ASSIGN,
+    TOKEN_EQUALS,
+    TOKEN_NOT_EQUALS,
     TOKEN_SEMICOLON,
     
     TOKEN_PLUS,
@@ -35,6 +37,7 @@ typedef enum {
     TOKEN_BITWISE_XOR,
 
     TOKEN_NAME,        // variable/function names
+    TOKEN_LAST_USABLE_TOKEN = TOKEN_NAME,
     TOKEN_NUMBER,      // numeric literals
     TOKEN_STRING,
     

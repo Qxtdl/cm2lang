@@ -7,40 +7,42 @@
 #include "../globals.h"
 #include "lexer.h"
 
-const char *tokens[] = {
-    "{",        // TOKEN_L_BRACE
-    "}",        // TOKEN_R_BRACE
-    "(",        // TOKEN_L_PAREN
-    ")",        // TOKEN_R_PAREN
-    "\"",       // TOKEN_QUOTE
-    "//",       // TOKEN_COMMENT
+const char *const tokens[] = {
+    [TOKEN_L_BRACE]     = "{",        // TOKEN_L_BRACE
+    [TOKEN_R_BRACE]     = "}",        // TOKEN_R_BRACE
+    [TOKEN_L_PARAN]     = "(",        // TOKEN_L_PAREN
+    [TOKEN_R_PARAN]     = ")",        // TOKEN_R_PAREN
+    [TOKEN_COMMENT]     = "//",       // TOKEN_COMMENT
 
-    "v16",      // TOKEN_V16
-    "v32",      // TOKEN_V32
-    "void",     // TOKEN_VOID
+    [TOKEN_V16]         = "v16",      // TOKEN_V16
+    [TOKEN_V32]         = "v32",      // TOKEN_V32
+    [TOKEN_VOID]        = "void",     // TOKEN_VOID
 
-    "fn",       // TOKEN_FN
-    "noreturn", // TOKEN_NORETURN
-    "noparam",  // TOKEN_NORETURN
+    [TOKEN_FN]          = "fn",       // TOKEN_FN
+    [TOKEN_NORETURN]    = "noreturn", // TOKEN_NORETURN
+    [TOKEN_NOPARAM]     = "noparam",  // TOKEN_NORETURN
 
-    "if",       // TOKEN_IF
+    [TOKEN_IF]          = "if",       // TOKEN_IF
 
-    "asm",      // TOKEN_ASM
+    [TOKEN_ASM]         = "asm",      // TOKEN_ASM
 
-    "=",        // TOKEN_ASSIGN
-    ";",        // TOKEN_SEMICOLON
+    [TOKEN_ASSIGN]      = "=",        // TOKEN_ASSIGN
+    [TOKEN_EQUALS]      = "==",       // TOKEN_EQUALS
+    [TOKEN_NOT_EQUALS]  = "!=",       // TOKEN_NOT_EQUALS
+    [TOKEN_SEMICOLON]   = ";",        // TOKEN_SEMICOLON
 
-    "+",        // TOKEN_PLUS
-    "-",        // TOKEN_MINUS
-    "&",        // TOKEN_BITWISE_AND
-    "|",        // TOKEN_BITWISE_OR
-    "^",        // TOKEN_BITWISE_XOR
+    [TOKEN_PLUS]        = "+",        // TOKEN_PLUS
+    [TOKEN_MINUS]       = "-",        // TOKEN_MINUS
+    [TOKEN_BITWISE_AND] = "&",        // TOKEN_BITWISE_AND
+    [TOKEN_BITWISE_OR]  = "|",        // TOKEN_BITWISE_OR
+    [TOKEN_BITWISE_XOR] = "^",        // TOKEN_BITWISE_XOR
 
-    "",         // TOKEN_NAME       (UNUSED)
-    "",         // TOKEN_NUMBER     (UNUSED)
-    "",         // TOKEN_STRING     (UNUSED)
+    "",                               // TOKEN_NAME       (UNUSED)
+    "",                               // TOKEN_NUMBER     (UNUSED)
+    "",                               // TOKEN_STRING     (UNUSED)
 
-    ""          // TOKEN_EOF        (UNUSED)
+    "",                               // TOKEN_EOF        (UNUSED)
+    [TOKEN_NULL] = " "
 };
 
 static struct {
@@ -106,19 +108,25 @@ bool lexer_next_token(void)
         lexer_push_token(TOKEN_EOF, NULL);
         return false; // no more tokens
     }
-    for (size_t i = 0; i < sizeof(tokens) / sizeof(tokens[0]); i++) {
-        size_t token_length = strlen(tokens[i]);
-        if (token_length > 0 && strncmp(lexer_state.current_pos, tokens[i], token_length) == 0)
-        {   
-            lexer_push_token(i, token_dup(token_length, lexer_state.current_pos));
-            if (i == TOKEN_COMMENT) {
+    token_type_t match_id;
+    const char *match = NULL;
+    for (size_t i = 0; i < TOKEN_LAST_USABLE_TOKEN; i++) {
+        if (!strncmp(lexer_state.current_pos, tokens[i], strlen(tokens[i]))) {
+            match_id = i;
+            match = tokens[i];
+        }
+        if (i == TOKEN_LAST_USABLE_TOKEN - 1 && match) {
+            size_t match_len = strlen(match);
+            lexer_push_token(match_id, token_dup(match_len, lexer_state.current_pos));
+            if (match_id == TOKEN_COMMENT)
                 lexer_advance_till_newline
-            } else
-                lexer_state.current_pos += token_length;
+            else
+                lexer_state.current_pos += match_len;
             return true;
         }
     }
     if (*lexer_state.current_pos == '\"') {
+        // TODO: Add escape support (like \")
         const char *string_start = ++lexer_state.current_pos;
         lexer_advance_till_quotes
         const char *string_end = lexer_state.current_pos;

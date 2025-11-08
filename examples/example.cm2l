@@ -1,16 +1,11 @@
 fn noreturn main(noparam) {
-    v16 a = 0;
-    v16 b = 1;
-
-    v16 c = a + b;
-    v16 d = b + c;
-    v16 e = c + d;
-    v16 f = d + e;
-    v16 g = e + f;
-    v16 h = f + g;
-    v16 i = g + h;
-    v16 j = h + i;
-    v16 k = i + j;
-    v16 l = j + k;
-    v16 m = k + l;
+    v16 loopcounter = 0;
+    v16 x = loopcounter;
+    v16 y = 1;
+    asm "fibloop:"
+    x = x + y;
+    y = y + x;
+    loopcounter = loopcounter + 1;
+    if (loopcounter == 1) {asm "jmp main"}
+    asm "jmp fibloop"
 }

@@ -9,20 +9,23 @@ struct ir_state {
     size_t compiled_len;
 };
 
-#define IR_NOP 0
-#define IR_LDI 1
-#define IR_ADD 2
-#define IR_SUB 3
-#define IR_AND 4
-#define IR_OR 5
-#define IR_XOR 6
-#define IR_SHR 7
-#define IR_SHL 8
-#define IR_LH 9
-#define IR_SH 10
-#define IR_BEQ 11
-#define IR_CALL 12
-#define IR_RET 13
+enum {
+    IR_NOP,
+    IR_LDI,
+    IR_ADD,
+    IR_SUB,
+    IR_AND,
+    IR_OR,
+    IR_XOR,
+    IR_SHR,
+    IR_SHL,
+    IR_LH,
+    IR_SH,
+    IR_JMP,
+    IR_BEQ,
+    IR_CALL,
+    IR_RET
+};
 
 static const char * const ir_inst[] = {
     [IR_NOP]    = "nop",
@@ -36,6 +39,7 @@ static const char * const ir_inst[] = {
     [IR_SHL]    = "shl",
     [IR_LH]     = "lh",
     [IR_SH]     = "sh",
+    [IR_JMP]    = "jmp",
     [IR_BEQ]    = "beq",
     [IR_CALL]   = "call",
     [IR_RET]    = "ret"
@@ -46,6 +50,8 @@ static const char * const ir_inst[] = {
 #define IR_T0 2
 #define IR_T1 3
 #define IR_T2 4
+#define IR_T3 5
+#define IR_T4 6
 
 typedef struct {
     const char *const name;
