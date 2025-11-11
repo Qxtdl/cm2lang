@@ -269,7 +269,6 @@ static void ir_process_scope(ast_node_ptr_t *body)
             ast_node_t *expr_op;
             for (size_t i = 0; (expr_op = ast_walk(&node->node_union.if_statement_node.condition.ast_nodes[0]->node_union.expr_node.ops)); i++) {
                 ast_node_t *expr_operator = ast_walk(&node->node_union.if_statement_node.condition.ast_nodes[0]->node_union.expr_node.operator);
-
                 if (i == 0)
                 {
                     if (isdigit(*expr_op->node_union.name_node.value))
@@ -297,19 +296,95 @@ static void ir_process_scope(ast_node_ptr_t *body)
                 ast_node_t *next_expr_op = ast_peek(&node->node_union.if_statement_node.condition.ast_nodes[0]->node_union.expr_node.ops, 1);
                 if (next_expr_op == NULL) {
                     // Handle dealing with evaluating the if statement
-                    const char *label_if_true = alloc_id_label("if_true"), *label_skip_if = alloc_id_label("skip_if");
+                    const char *label_body = alloc_id_label("if_true"), *label_skip_if = alloc_id_label("skip_if");
                     if (comparison_operator == TOKEN_EQUALS)
-                        emit(ir_inst[IR_BEQ], NULL, reg_value_to_compare, reg_imm, label_if_true, "Evaluate if statement");
+                        emit(ir_inst[IR_BEQ], NULL, reg_value_to_compare, reg_imm, label_body, "Evaluate if statement");
                     else {
-                        // Handle !=
+                        const char *label_skip_not_true = alloc_id_label("skip_not_true");
+                        emit(ir_inst[IR_BEQ], NULL, reg_value_to_compare, reg_imm, label_skip_not_true, "Evaluate if statement");
+                        emit(ir_inst[IR_JMP], NULL, NULL, NULL, label_body, "Evaluate if statement");
+                        add_label(label_skip_not_true);
                     }
                     emit(ir_inst[IR_JMP], NULL, label_skip_if, NULL, NULL, "If false, skip if");
-                    add_label(label_if_true);
+                    add_label(label_body);
                     free_reg(reg_value_to_compare);
                     free_reg(reg_imm);
                     ir_process_scope(&node->node_union.if_statement_node.body);
                     add_label(label_skip_if);
                     break;
+                }
+                const char *reg_op = alloc_reg();
+                if (comparison_operator == TOKEN_NULL) {
+                    // We are still evaluating the value to check
+                    if (isdigit(*next_expr_op->node_union.name_node.value))
+                        emit(ir_inst[IR_LDI], reg_op, next_expr_op->node_union.name_node.value, NULL, NULL, "Load op imm");
+                    else {
+                        const char *reg_op_addr = alloc_reg();
+                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                        emit(ir_inst[IR_LH], reg_op, reg_op_addr, NULL, NULL, "Load op var");
+                        free_reg(reg_op_addr);
+                    }
+                    eval_arith_operator(expr_operator->node_union.name_node.value, reg_imm, reg_imm, reg_op);
+                }
+                else if (comparison_operator == TOKEN_EQUALS || comparison_operator == TOKEN_NOT_EQUALS) {
+                    if (isdigit(*next_expr_op->node_union.name_node.value))
+                        emit(ir_inst[IR_LDI], reg_op, next_expr_op->node_union.name_node.value, NULL, NULL, "Load op imm");
+                    else {
+                        const char *reg_op_addr = alloc_reg();
+                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                        emit(ir_inst[IR_LH], reg_op, reg_op_addr, NULL, NULL, "Load op var");
+                        free_reg(reg_op_addr);
+                    }
+                    if (reg_value_to_compare == NULL) reg_value_to_compare = alloc_reg();
+                    eval_arith_operator(expr_operator->node_union.name_node.value, reg_value_to_compare, reg_value_to_compare, reg_op);
+                }
+                free_reg(reg_op);
+            }
+        }
+        else if (node->type == NODE_WHILE_STATEMENT) {
+            /* TODO
+             * This code is very broken and segfaults and reused code from if statement.
+             * This design also won't work since reg_value_to_compare and reg_imm are stored in registers then checked,
+             * in turn if you generate a scope there will be 2 registers missing, and if you have nested while loops it will cause a register leak
+             * In short this is a design flaw and needs to be fixed, but atleast if statement is working!
+             */  
+            const char *reg_value_to_compare = NULL, *reg_imm = NULL;
+            token_type_t comparison_operator = TOKEN_NULL;
+
+            ast_node_t *expr_op;
+            for (size_t i = 0; (expr_op = ast_walk(&node->node_union.while_statement_node.condition.ast_nodes[0]->node_union.expr_node.ops)); i++) {
+                ast_node_t *expr_operator = ast_walk(&node->node_union.while_statement_node.condition.ast_nodes[0]->node_union.expr_node.operator);
+                if (i == 0)
+                {
+                    if (isdigit(*expr_op->node_union.name_node.value))
+                        if (!strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_EQUALS]) || !strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_NOT_EQUALS]))
+                            emit(ir_inst[IR_LDI], reg_imm = alloc_reg(), expr_op->node_union.name_node.value, NULL, NULL, "Load immediate to check");
+                        else
+                            emit(ir_inst[IR_LDI], reg_imm = alloc_reg(), expr_op->node_union.name_node.value, NULL, NULL, "Load immediate to process");
+                    else {
+                        const char *op_var_addr = alloc_reg();
+                        if (!strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_EQUALS]) || !strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_NOT_EQUALS])) {
+                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to check");
+                            emit(ir_inst[IR_LH], reg_imm = alloc_reg(), op_var_addr, NULL, NULL, "Load var to check");
+                        }
+                        else {
+                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to process");
+                            emit(ir_inst[IR_LH], reg_imm = alloc_reg(), op_var_addr, NULL, NULL, "Load var to process");
+                        }
+                        free_reg(op_var_addr);
+                    }
+                }
+                // Do we have operator? Update comparison_operator
+                if (expr_operator && !strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_EQUALS])) comparison_operator = TOKEN_EQUALS;
+                if (expr_operator && !strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_NOT_EQUALS])) comparison_operator = TOKEN_NOT_EQUALS;
+
+                ast_node_t *next_expr_op = ast_peek(&node->node_union.while_statement_node.condition.ast_nodes[0]->node_union.expr_node.ops, 1);
+                if (next_expr_op == NULL) {
+                    // Check reg_value_to_check and reg_imm
+                    const char *label_body = alloc_id_label("while_true"), *label_skip = alloc_id_label("skip_while");
+                    if (comparison_operator == TOKEN_EQUALS) {
+                        emit(ir_inst[IR_BEQ], NULL, reg_value_to_compare, reg_imm, label_body);
+                    }
                 }
                 const char *reg_op = alloc_reg();
                 if (comparison_operator == TOKEN_NULL) {

@@ -11,7 +11,8 @@ typedef enum node_type {
     NODE_VARDECL,
     NODE_EXPRESSION,
     NODE_INLINE_ASM,
-    NODE_IF_STATEMENT
+    NODE_IF_STATEMENT,
+    NODE_WHILE_STATEMENT
 } node_type_t;
 
 struct ast_node;
@@ -67,6 +68,11 @@ typedef struct {
     ast_node_ptr_t body;
 } if_statement_node_t;
 
+typedef struct {
+    ast_node_ptr_t condition;
+    ast_node_ptr_t body;
+} while_statement_node_t;
+
 typedef union {
     program_node_t program_node;
     name_node_t name_node;
@@ -75,6 +81,7 @@ typedef union {
     expr_node_t expr_node;
     inline_asm_node_t inline_asm_node;
     if_statement_node_t if_statement_node;
+    while_statement_node_t while_statement_node;
 } ast_node_union_t;
 
 typedef struct ast_node {

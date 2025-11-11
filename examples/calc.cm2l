@@ -1,0 +1,19 @@
+fn noreturn main() {
+   v16 x = 10;
+   v16 y = 3;
+   v16 z = 1;
+   v16 operator = 1;
+   // Operator:
+   // 0: +
+   // 1: -
+   if (operator == 0) {
+      x = x + y + z;
+      asm "jmp skipswitch"
+   }
+   if (operator == 1) {
+      x = x - y - z;
+      asm "jmp skipswitch"
+   }
+   asm "skipswitch:"
+   asm "jmp skipswitch"
+}

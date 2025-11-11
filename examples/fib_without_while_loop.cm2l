@@ -1,0 +1,11 @@
+fn noreturn main(noparam) {
+    v16 loopcounter = 0;
+    v16 x = loopcounter;
+    v16 y = 1;
+    asm "fibloop:"
+    x = x + y;
+    y = y + x;
+    loopcounter = loopcounter + 1;
+    if (loopcounter == 4) {asm "jmp main"} //  4 iterations of fibonacci
+    asm "jmp fibloop"
+}

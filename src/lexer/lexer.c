@@ -23,6 +23,7 @@ const char *const tokens[] = {
     [TOKEN_NOPARAM]     = "noparam",  // TOKEN_NORETURN
 
     [TOKEN_IF]          = "if",       // TOKEN_IF
+    [TOKEN_WHILE]       = "while",    // TOKEN_WHILE
 
     [TOKEN_ASM]         = "asm",      // TOKEN_ASM
 

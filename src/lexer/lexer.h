@@ -22,6 +22,7 @@ typedef enum {
     TOKEN_NOPARAM,
 
     TOKEN_IF,
+    TOKEN_WHILE,
 
     TOKEN_ASM,
 

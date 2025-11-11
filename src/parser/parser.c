@@ -82,7 +82,8 @@ typedef enum {
     PARSE_VAR,              // 4
     PARSE_VAR_INIT,         // 5
     PARSE_INLINE_ASM,
-    PARSE_IF_STATEMENT
+    PARSE_IF_STATEMENT,
+    PARSE_WHILE_STATEMENT
 } parser_context_t;
     
 size_t context_stack_size = 0;
@@ -169,6 +170,12 @@ void parser_process(void)
                 create_ast_node(false, (ast_node_t){NODE_EXPRESSION, {{{0}}}}));
             push_context(PARSE_IF_STATEMENT);
             break;
+        case TOKEN_WHILE:
+            insert_ast_node(last_created_block_nodes, create_ast_node(true, (ast_node_t){NODE_WHILE_STATEMENT, {{{0}}}}));
+            insert_ast_node(&last_created_node->node_union.if_statement_node.condition, 
+                create_ast_node(false, (ast_node_t){NODE_EXPRESSION, {{{0}}}}));
+            push_context(PARSE_WHILE_STATEMENT);            
+            break;
         case TOKEN_ASM:
             insert_ast_node(last_created_block_nodes, create_ast_node(true, (ast_node_t){NODE_INLINE_ASM, {{{0}}}}));
             push_context(PARSE_INLINE_ASM);
@@ -217,6 +224,7 @@ void parser_process(void)
                 break;
             case PARSE_VAR_INIT:
             case PARSE_IF_STATEMENT:
+            case PARSE_WHILE_STATEMENT:
                 insert_ast_node(&last_created_expr_node->node_union.expr_node.ops,
                     create_ast_node(true, (ast_node_t){NODE_NAME, {.name_node = {token.value}}}));
                 break;
