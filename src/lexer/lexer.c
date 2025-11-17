@@ -49,6 +49,7 @@ const char *const tokens[] = {
 static struct {
     const char *source;
     const char *current_pos; // current position in the source code
+    const char *current_newline;
     token_t *current_token;
     size_t tokens_size; // number of tokens allocated in bytes
 } lexer_state;
@@ -58,14 +59,18 @@ void lexer_init(const char *source)
     lexer_state.source = source;
     lexer_state.current_token = NULL;
     lexer_state.current_pos = source;
+    lexer_state.current_newline = source;
     lexer_state.tokens_size = 0;
 }
 
-static void lexer_push_token(token_type_t type, char *token_value)
+static size_t line = 0;
+
+static void lexer_push_token(token_type_t type, const char *token_value)
 {
     lexer_state.current_token = realloc(lexer_state.current_token, lexer_state.tokens_size + sizeof(token_t));
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].type = type;
     lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].value = token_value;
+    lexer_state.current_token[lexer_state.tokens_size / sizeof(token_t)].line = line;
     lexer_state.tokens_size += sizeof(token_t);
 }
 
@@ -104,6 +109,7 @@ while (*lexer_state.current_pos != '\0' && *lexer_state.current_pos != '\n') \
 [[nodiscard]]
 bool lexer_next_token(void)
 {
+    if ((lexer_state.current_newline = strstr(lexer_state.current_newline, "\n"))) line++;
     lexer_advance_till_non_whitespace
     if (*lexer_state.current_pos == '\0') {
         lexer_push_token(TOKEN_EOF, NULL);
@@ -166,4 +172,9 @@ token_t lexer_read_token(bool *parser_continue)
     else
         *parser_continue = true;
     return *current_token++;
+}
+
+token_t lexer_peek_token(size_t offset)
+{
+    return current_token[times_read - 1 + offset];
 }

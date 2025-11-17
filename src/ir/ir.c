@@ -88,6 +88,7 @@ static void emit(
 typedef struct {
     const char *identifier;
     const char *type;
+    body_node_t *block;
     int address;
 } var_entry_t;
 
@@ -96,31 +97,56 @@ var_entry_t *var_entry_sp = NULL;
 
 static int cpu_stack_pointer;
 
-static var_entry_t *push_var(const char *identifier, const char *type)
+#define dec_sp (cpu_stack_pointer -= strtol(get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, 10))
+#define inc_sp (cpu_stack_pointer += strtol(get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, 10))
+
+static var_entry_t *push_var(body_node_t *block, const char *identifier, const char *type)
 {
     var_entry_sp = realloc(var_entry_sp, sizeof(var_entry_t) * ++var_entry_stack_size);
     var_entry_sp[var_entry_stack_size - 1].identifier = identifier;
     var_entry_sp[var_entry_stack_size - 1].type = type;
+    var_entry_sp[var_entry_stack_size - 1].block = block;
     if (!strcmp(type, "v16"))
-        var_entry_sp[var_entry_stack_size - 1].address = cpu_stack_pointer = cpu_stack_pointer - strtol(get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, 10);
+        var_entry_sp[var_entry_stack_size - 1].address = dec_sp;
     return var_entry_sp;
 }
 
-static var_entry_t *lookup_var(const char *identifier)
+static var_entry_t pop_var(const char *type)
+{
+    var_entry_t popped = var_entry_sp[var_entry_stack_size - 1];
+    var_entry_sp = realloc(var_entry_sp, sizeof(var_entry_t) * --var_entry_stack_size);
+    if (!strcmp(type, "v16"))
+        cpu_stack_pointer += strtol(get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, 10);
+    return popped;
+}
+
+static void pop_block(body_node_t *block)
+{
+    var_entry_t entry;
+    for (; var_entry_stack_size && ((entry = var_entry_sp[var_entry_stack_size - 1])).block == block;) {
+        emit_noreturn_pop();
+        pop_var(entry.type);
+    }
+}
+
+static var_entry_t *lookup_var(body_node_t *user_block, const char *identifier)
 {
     for (size_t i = 0; i < var_entry_stack_size; i++)
-        if (!strcmp(var_entry_sp[i].identifier, identifier))
+        if (!strcmp(var_entry_sp[i].identifier, identifier) /*&&var_entry_sp[i].block == user_block*/) {
+            // check if var_entry_sp children is user block
             return &var_entry_sp[i];
+        }
     app_abort("lookup_var()", "Could not find the variable \"%s\"", identifier)
 }
 
 static ir_register_t ir_registers[] = {
-    [0] = {.name = "x0", .busy = true}, // zero (true just incase so it can never be used?)
-    [1] = {.name = "x1", .busy = true}, // sp (points to half) (true just incase so it can be never used?)
-    [2] = {.name = "x2", .busy = false}, // t0
-    [3] = {.name = "x3", .busy = false}, // t1
-    [4] = {.name = "x4", .busy = false}, // t2
-    [5] = {.name = "x5", .busy = false}  // t3
+    [IR_ZERO] = {.name = "x0", .busy = true}, // zero (true just incase so it can never be used?)
+    [IR_SP] = {.name = "x1", .busy = true}, // sp (points to half) (true just incase so it can be never used?)
+    [IR_T0] = {.name = "x2", .busy = false}, // t0
+    [IR_T1] = {.name = "x3", .busy = false}, // t1
+    [IR_T2] = {.name = "x4", .busy = false}, // t2
+    [IR_T3] = {.name = "x5", .busy = false}, // t3
+    [IR_T4] = {.name = "x6", .busy = false}  // t4
 };
 
 static const char *alloc_reg(void)
@@ -130,7 +156,7 @@ static const char *alloc_reg(void)
             ir_registers[i].busy = true;
             return ir_registers[i].name;
         }
-    app_abort("alloc_reg()", "Register allocator could not find a free register. The compiler is leaking registers!")
+    app_abort("alloc_reg()", "Register allocator could not find a free register.")
 }
 
 static void free_reg(const char *name)
@@ -169,33 +195,45 @@ static void eval_arith_operator(const char *operator, const char *reg_rd, const 
     }
 }
 
-#define emit_push(reg) \
-{ \
-    const char *reg_sp_subtrahend = alloc_reg(); \
-    emit(ir_inst[IR_LDI], reg_sp_subtrahend, get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, NULL, "Load subtrahend for stack pointer"); \
-    emit(ir_inst[IR_SUB], ir_registers[IR_SP].name, ir_registers[IR_SP].name, reg_sp_subtrahend, NULL, "Manipulate stack pointer"); \
-    emit(ir_inst[IR_SH], NULL, ir_registers[IR_SP].name, reg, NULL, "Save value onto stack"); \
-    free_reg(reg_sp_subtrahend); \
+const char *emit_push(ast_node_ptr_t *block, const char *reg)
+{
+    const char *reg_sp_subtrahend = alloc_reg();
+    emit(ir_inst[IR_LDI], reg_sp_subtrahend, get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, NULL, "Load subtrahend for stack pointer");
+    emit(ir_inst[IR_SUB], ir_registers[IR_SP].name, ir_registers[IR_SP].name, reg_sp_subtrahend, NULL, "Manipulate stack pointer");
+    emit(ir_inst[IR_SH], NULL, ir_registers[IR_SP].name, reg, NULL, "Save value onto stack");
+    free_reg(reg_sp_subtrahend);
+    return push_var(block, NULL, "v16")->address;
 }
 
-#define emit_pop(reg) \
-{ \
-    const char *reg_sp_addend = alloc_reg(); \
-    emit(ir_inst[IR_LH], reg, ir_registers[IR_SP].name, NULL, NULL, "Pop off the stack"); \
-    emit(ir_inst[IR_LDI], reg_sp_addend, get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, NULL, "Load addend for stack pointer"); \
-    emit(ir_inst[IR_ADD], ir_registers[IR_SP].name, ir_registers[IR_SP].name, reg_sp_addend, NULL, "Manipulate stack pointer"); \
-    free_reg(reg_sp_addend); \
+void emit_pop(const char *reg)
+{
+    const char *reg_sp_addend = alloc_reg();
+    emit(ir_inst[IR_LH], reg, ir_registers[IR_SP].name, NULL, NULL, "Pop off the stack");
+    emit(ir_inst[IR_LDI], reg_sp_addend, get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, NULL, "Load addend for stack pointer");
+    emit(ir_inst[IR_ADD], ir_registers[IR_SP].name, ir_registers[IR_SP].name, reg_sp_addend, NULL, "Manipulate stack pointer");
+    free_reg(reg_sp_addend);
 }
 
-static void ir_process_scope(ast_node_ptr_t *body)
+void emit_noreturn_pop(void)
+{
+    const char *reg_sp_addend = alloc_reg();
+    emit(ir_inst[IR_LDI], reg_sp_addend, get_cflag_value(cflags[FLAG_HALF_SIZE]), NULL, NULL, "Load addend for stack pointer");
+    emit(ir_inst[IR_ADD], ir_registers[IR_SP].name, ir_registers[IR_SP].name, reg_sp_addend, NULL, "Manipulate stack pointer");
+    free_reg(reg_sp_addend);  
+}
+
+static void ir_process_scope(body_node_t *body)
 {
     ast_node_t *node;
-    while ((node = ast_walk(body))) {
-        if (node->type == NODE_VARDECL) {
+    while ((node = ast_walk(&body->body))) {
+        if (node->type == NODE_BLOCK) {
+            ir_process_scope(&node->node_union.block_node.body_node.body);
+        }
+        else if (node->type == NODE_VARDECL) {
             const char *var_name = node->node_union.vardecl_node.name.ast_nodes[0]->node_union.name_node.value;
             const char *var_type = NULL;
             if (node->node_union.vardecl_node.is_preexisting == false)
-                push_var(var_name, var_type = node->node_union.vardecl_node.type.ast_nodes[0]->node_union.name_node.value);
+                push_var(body, var_name, var_type = node->node_union.vardecl_node.type.ast_nodes[0]->node_union.name_node.value);
             
             ast_node_t *expr_op;
             for (size_t i = 0; (expr_op = ast_walk(&node->node_union.vardecl_node.init.ast_nodes[0]->node_union.expr_node.ops)); i++) {
@@ -209,7 +247,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
                     else {
                         const char *reg_op_var_addr = NULL;
                         emit(ir_inst[IR_LDI], reg_op_var_addr = alloc_reg(), 
-                        itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                        itoa(lookup_var(body, expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
                         emit(ir_inst[IR_LH], reg_imm = alloc_reg(), reg_op_var_addr, NULL, NULL, "Load op var");
                         free_reg(reg_op_var_addr);
                     }
@@ -224,7 +262,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
                         free_reg(reg_sp_subtrahend);
                     } else {
                         const char *reg_op_var_addr = NULL;
-                        emit(ir_inst[IR_LDI], reg_op_var_addr = alloc_reg(), itoa(lookup_var(var_name)->address), NULL, NULL, "Load op var addr");
+                        emit(ir_inst[IR_LDI], reg_op_var_addr = alloc_reg(), itoa(lookup_var(body, var_name)->address), NULL, NULL, "Load op var addr");
                         emit(ir_inst[IR_SH], NULL, reg_op_var_addr, reg_imm, NULL, "Save value into var address");
                         free_reg(reg_op_var_addr);
                     }
@@ -236,14 +274,14 @@ static void ir_process_scope(ast_node_ptr_t *body)
                 
                 const char *reg_var_addr = NULL, *reg_var_old_value = NULL;
                 if (node->node_union.vardecl_node.is_preexisting == true)
-                    emit(ir_inst[IR_LDI], reg_var_addr = alloc_reg(), itoa(lookup_var(var_name)->address), NULL, NULL, "Load var addr");
+                    emit(ir_inst[IR_LDI], reg_var_addr = alloc_reg(), itoa(lookup_var(body, var_name)->address), NULL, NULL, "Load var addr");
                 
                 if (isdigit(*next_expr_op->node_union.name_node.value))
                     emit(ir_inst[IR_LDI], reg_imm = alloc_reg(), next_expr_op->node_union.name_node.value, NULL, NULL, "Load second immediate");
                 else {
                     const char *reg_op_var_addr;
                     emit(ir_inst[IR_LDI], reg_op_var_addr = alloc_reg(), 
-                    itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                    itoa(lookup_var(body, next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
                     emit(ir_inst[IR_LH], reg_imm = alloc_reg(), reg_op_var_addr, NULL, NULL, "Load var");
                     free_reg(reg_op_var_addr);
                 }
@@ -279,11 +317,11 @@ static void ir_process_scope(ast_node_ptr_t *body)
                     else {
                         const char *op_var_addr = alloc_reg();
                         if (!strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_EQUALS]) || !strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_NOT_EQUALS])) {
-                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to check");
+                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(body, expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to check");
                             emit(ir_inst[IR_LH], reg_imm = alloc_reg(), op_var_addr, NULL, NULL, "Load var to check");
                         }
                         else {
-                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to process");
+                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(body, expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to process");
                             emit(ir_inst[IR_LH], reg_imm = alloc_reg(), op_var_addr, NULL, NULL, "Load var to process");
                         }
                         free_reg(op_var_addr);
@@ -309,7 +347,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
                     add_label(label_body);
                     free_reg(reg_value_to_compare);
                     free_reg(reg_imm);
-                    ir_process_scope(&node->node_union.if_statement_node.body);
+                    ir_process_scope(&node->node_union.if_statement_node.body_node.body);
                     add_label(label_skip_if);
                     break;
                 }
@@ -320,7 +358,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
                         emit(ir_inst[IR_LDI], reg_op, next_expr_op->node_union.name_node.value, NULL, NULL, "Load op imm");
                     else {
                         const char *reg_op_addr = alloc_reg();
-                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(body, next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
                         emit(ir_inst[IR_LH], reg_op, reg_op_addr, NULL, NULL, "Load op var");
                         free_reg(reg_op_addr);
                     }
@@ -331,7 +369,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
                         emit(ir_inst[IR_LDI], reg_op, next_expr_op->node_union.name_node.value, NULL, NULL, "Load op imm");
                     else {
                         const char *reg_op_addr = alloc_reg();
-                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(body, next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
                         emit(ir_inst[IR_LH], reg_op, reg_op_addr, NULL, NULL, "Load op var");
                         free_reg(reg_op_addr);
                     }
@@ -342,12 +380,6 @@ static void ir_process_scope(ast_node_ptr_t *body)
             }
         }
         else if (node->type == NODE_WHILE_STATEMENT) {
-            /* TODO
-             * This code is very broken and segfaults and reused code from if statement.
-             * This design also won't work since reg_value_to_compare and reg_imm are stored in registers then checked,
-             * in turn if you generate a scope there will be 2 registers missing, and if you have nested while loops it will cause a register leak
-             * In short this is a design flaw and needs to be fixed, but atleast if statement is working!
-             */  
             const char *reg_value_to_compare = NULL, *reg_imm = NULL;
             token_type_t comparison_operator = TOKEN_NULL;
 
@@ -364,11 +396,11 @@ static void ir_process_scope(ast_node_ptr_t *body)
                     else {
                         const char *op_var_addr = alloc_reg();
                         if (!strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_EQUALS]) || !strcmp(expr_operator->node_union.name_node.value, tokens[TOKEN_NOT_EQUALS])) {
-                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to check");
+                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(body, expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to check");
                             emit(ir_inst[IR_LH], reg_imm = alloc_reg(), op_var_addr, NULL, NULL, "Load var to check");
                         }
                         else {
-                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to process");
+                            emit(ir_inst[IR_LDI], op_var_addr, itoa(lookup_var(body, expr_op->node_union.name_node.value)->address), NULL, NULL, "Load var addr to process");
                             emit(ir_inst[IR_LH], reg_imm = alloc_reg(), op_var_addr, NULL, NULL, "Load var to process");
                         }
                         free_reg(op_var_addr);
@@ -380,11 +412,27 @@ static void ir_process_scope(ast_node_ptr_t *body)
 
                 ast_node_t *next_expr_op = ast_peek(&node->node_union.while_statement_node.condition.ast_nodes[0]->node_union.expr_node.ops, 1);
                 if (next_expr_op == NULL) {
-                    // Check reg_value_to_check and reg_imm
-                    const char *label_body = alloc_id_label("while_true"), *label_skip = alloc_id_label("skip_while");
-                    if (comparison_operator == TOKEN_EQUALS) {
-                        emit(ir_inst[IR_BEQ], NULL, reg_value_to_compare, reg_imm, label_body);
-                    }
+                    int reg_value_to_compare_addr = emit_push(NULL, reg_value_to_compare);
+                    int reg_imm_addr = emit_push(NULL, reg_imm);
+                    free_reg(reg_value_to_compare);
+                    free_reg(reg_imm);
+                    const char 
+                    *label_check = alloc_id_label("check_while_loop"),
+                    *label_body = alloc_id_label("while_loop"),
+                    *label_skip = alloc_id_label("skip_while_loop");
+                    add_label(label_check);
+                    emit_pop(reg_imm = alloc_reg());
+                    emit_pop(reg_value_to_compare = alloc_reg());
+                    emit(ir_inst[IR_BEQ], NULL, reg_value_to_compare, reg_imm, label_body, NULL);
+                    free_reg(reg_value_to_compare);
+                    free_reg(reg_imm);
+                    emit(ir_inst[IR_JMP], NULL, label_skip, NULL, NULL, NULL);
+                    add_label(label_body);
+                    //emit_p
+                    ir_process_scope(&node->node_union.while_statement_node.body_node.body);
+                    emit(ir_inst[IR_JMP], NULL, label_check, NULL, NULL, NULL);
+                    add_label(label_skip);
+                    break;
                 }
                 const char *reg_op = alloc_reg();
                 if (comparison_operator == TOKEN_NULL) {
@@ -393,7 +441,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
                         emit(ir_inst[IR_LDI], reg_op, next_expr_op->node_union.name_node.value, NULL, NULL, "Load op imm");
                     else {
                         const char *reg_op_addr = alloc_reg();
-                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(body, next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
                         emit(ir_inst[IR_LH], reg_op, reg_op_addr, NULL, NULL, "Load op var");
                         free_reg(reg_op_addr);
                     }
@@ -404,7 +452,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
                         emit(ir_inst[IR_LDI], reg_op, next_expr_op->node_union.name_node.value, NULL, NULL, "Load op imm");
                     else {
                         const char *reg_op_addr = alloc_reg();
-                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
+                        emit(ir_inst[IR_LDI], reg_op_addr, itoa(lookup_var(body, next_expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
                         emit(ir_inst[IR_LH], reg_op, reg_op_addr, NULL, NULL, "Load op var");
                         free_reg(reg_op_addr);
                     }
@@ -415,6 +463,7 @@ static void ir_process_scope(ast_node_ptr_t *body)
             }
         }
     }
+    pop_block(body);
 }
 
 [[nodiscard]]
@@ -433,7 +482,7 @@ static bool ir_process_globals(ast_node_t *global_node)
             emit(ir_inst[IR_LDI], ir_registers[IR_SP].name, stack_init, NULL, NULL, "Set up stack pointer");
             cpu_stack_pointer = strtol(stack_init, NULL, 10);
         }
-        ir_process_scope(&global_node->node_union.fn_node.body);
+        ir_process_scope(&global_node->node_union.fn_node.body_node.body);
         emit(ir_inst[IR_RET], NULL, NULL, NULL, NULL, NULL);
     }
     return true;
@@ -443,6 +492,6 @@ extern ast_node_t *program_node;
 
 void ir_process(void)
 {
-    while (ir_process_globals(ast_walk(&program_node->node_union.program_node.body)));
+    while (ir_process_globals(ast_walk(&program_node->node_union.program_node.body_node.body)));
     ir_state.compiled_len = strlen(ir_state.compiled);
 }

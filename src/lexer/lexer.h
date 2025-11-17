@@ -48,10 +48,12 @@ typedef enum {
 typedef struct {
     token_type_t type;
     const char *value;
+    size_t line; // This is only used by syntaxanalyzer.c
 } token_t;
 
 void lexer_init(const char *source);
 bool lexer_next_token(void);
 token_t lexer_read_token(bool *parser_continue);
+token_t lexer_peek_token(size_t offset);
 
 #endif // LEXER_H
