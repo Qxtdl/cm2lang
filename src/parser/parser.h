@@ -27,7 +27,6 @@ typedef struct {
 
 typedef struct {
     ast_node_ptr_t body;
-    ast_node_ptr_t body_children;
 } body_node_t;
 
 typedef struct {
