@@ -400,7 +400,7 @@ static void ir_process_scope(body_node_t *body)
         else if (node->type == NODE_WHILE_STATEMENT) {
             token_type_t comparison_operator = TOKEN_NULL;
             const char *label_check = add_label(alloc_id_label("while_check"));
-            const char *reg_lvalue = alloc_reg(), *reg_rvalue = NULL;
+            const char *reg_lvalue = NULL, *reg_rvalue = NULL;
             const char *reg_imm = NULL;
             bool reg_rvalue_ready = false;            
 

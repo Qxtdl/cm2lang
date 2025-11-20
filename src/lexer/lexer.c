@@ -24,8 +24,11 @@ const char *const tokens[] = {
 
     [TOKEN_IF]          = "if",       // TOKEN_IF
     [TOKEN_WHILE]       = "while",    // TOKEN_WHILE
+    [TOKEN_BREAK]       = "break",    // TOKEN_BREAK
 
     [TOKEN_ASM]         = "asm",      // TOKEN_ASM
+
+    [TOKEN_ALWAYS]      = "always",   // TOKEN_ALWAYS
 
     [TOKEN_ASSIGN]      = "=",        // TOKEN_ASSIGN
     [TOKEN_EQUALS]      = "==",       // TOKEN_EQUALS

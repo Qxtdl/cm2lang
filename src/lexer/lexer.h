@@ -23,8 +23,11 @@ typedef enum {
 
     TOKEN_IF,
     TOKEN_WHILE,
+    TOKEN_BREAK,
 
     TOKEN_ASM,
+
+    TOKEN_ALWAYS,
 
     TOKEN_ASSIGN,
     TOKEN_EQUALS,
