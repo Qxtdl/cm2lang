@@ -20,8 +20,8 @@ just_compile_lang:
 compile: just_compile_lang compile_transpiler
 	mv cm2ltranspiler/build/cm2lt build/cm2lt
 
-CM2LCFLAGS = -fstack-init=0 -fhalf-size=2
+CM2LCFLAGS = -fstack-init=0 -fhalf-size=2 -fno-syntax-analyzer
 CM2LTFLAGS =
 run:
-	./build/cm2lc examples/example.cm2l build/compiled.s $(CM2LCFLAGS)
+	./build/cm2lc examples/fib.cm2l build/compiled.s $(CM2LCFLAGS)
 	./build/cm2lt cm2ltranspiler/examples/rv32i.cm2lhd build/compiled.s build/transpiled.s $(CM2LTFLAGS)
