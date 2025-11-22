@@ -32,14 +32,6 @@ static const char *add_label(const char *name)
 
 static size_t label_id = 0;
 
-static const char *add_id_label(const char *name)
-{
-    ir_rstrcat(name);
-    ir_rstrcat(itoa(label_id)); // weridly label_id++ doesn't work
-    label_id++;
-    ir_rstrcat(":\n")
-}
-
 static const char *alloc_id_label(const char *name)
 {
     char *label = strdup(name);
@@ -121,13 +113,15 @@ static var_entry_t pop_var(const char *type)
     return popped;
 }
 
-static void pop_block(body_node_t *block)
+static const char *pop_block(body_node_t *block, const char *pop_block_label)
 {
+    const char *new_pop_block_label = pop_block_label ? add_label(pop_block_label) : add_label(alloc_id_label("pop_block"));
     var_entry_t entry;
     for (; var_entry_stack_size && ((entry = var_entry_sp[var_entry_stack_size - 1])).block == block;) {
         emit_noreturn_pop();
         pop_var(entry.type);
     }
+    return new_pop_block_label ? new_pop_block_label : pop_block_label;
 }
 
 static var_entry_t *lookup_var(const char *identifier)
@@ -236,16 +230,15 @@ static inline void load_imm_into_reg(const char *imm, const char *reg)
 {
     emit(ir_inst[IR_LDI], reg, imm, NULL, NULL, "Load imm into reg");
 }
-
 /* ASM UTILS END */
 
 // TODO: This needs to be refactored to use the new ASM UTILS
-static void ir_process_scope(body_node_t *body)
+static const char *ir_process_scope(body_node_t *body, const char *pop_block_label)
 {
     ast_node_t *node;
     while ((node = ast_walk(&body->body))) {
         if (node->type == NODE_BLOCK) {
-            ir_process_scope(&node->node_union.block_node.body_node.body);
+            ir_process_scope(&node->node_union.block_node.body_node.body, NULL);
         }
         else if (node->type == NODE_VARDECL) {
             const char *var_name = node->node_union.vardecl_node.name.ast_nodes[0]->node_union.name_node.value;
@@ -261,15 +254,9 @@ static void ir_process_scope(body_node_t *body)
                 if (i == 0) 
                 {
                     if (isdigit(*expr_op->node_union.name_node.value))
-                        emit(ir_inst[IR_LDI], reg_imm = alloc_reg(), expr_op->node_union.name_node.value, NULL, NULL, "Load immediate");
-                    else {
-                        const char *reg_op_var_addr = NULL;
-                        emit(ir_inst[IR_LDI], reg_op_var_addr = alloc_reg(), 
-                        itoa(lookup_var(expr_op->node_union.name_node.value)->address), NULL, NULL, "Load op var addr");
-                        emit(ir_inst[IR_LH], reg_imm = alloc_reg(), reg_op_var_addr, NULL, NULL, "Load op var");
-                        free_reg(reg_op_var_addr);
-                    }
-                    /* Save reg_imm onto stack */
+                        load_imm_into_reg(expr_op->node_union.name_node.value, reg_imm = alloc_reg());
+                    else
+                        load_var_into_reg(expr_op->node_union.name_node.value, reg_imm = alloc_reg());
 
                     if (node->node_union.vardecl_node.is_preexisting == false) {
                         const char *reg_sp_subtrahend = NULL;
@@ -365,7 +352,7 @@ static void ir_process_scope(body_node_t *body)
                     add_label(label_body);
                     free_reg(reg_value_to_compare);
                     free_reg(reg_imm);
-                    ir_process_scope(&node->node_union.if_statement_node.body_node.body);
+                    ir_process_scope(&node->node_union.if_statement_node.body_node.body, NULL);
                     add_label(label_skip_if);
                     break;
                 }
@@ -475,7 +462,7 @@ static void ir_process_scope(body_node_t *body)
 
             const char *label_body = alloc_id_label("while_body");
             const char *label_skip = alloc_id_label("skip_while");
-            if (comparison_operator == TOKEN_EQUALS) {
+                if (comparison_operator == TOKEN_EQUALS) {
                 emit(ir_inst[IR_BEQ], NULL, free_reg(reg_lvalue), free_reg(reg_rvalue), label_body, "Evaluate while loop");
                 emit(ir_inst[IR_JMP], NULL, label_skip, NULL, NULL, "Evaluate while loop");
             }
@@ -484,12 +471,17 @@ static void ir_process_scope(body_node_t *body)
                 emit(ir_inst[IR_JMP], NULL, label_body, NULL, NULL, "Evaluate while loop");
             }
             add_label(label_body);
-            ir_process_scope(&node->node_union.while_statement_node.body_node.body);
+            ir_process_scope(&node->node_union.while_statement_node.body_node.body, 
+                node->node_union.while_statement_node.body_node.pop_block_label = alloc_id_label("pop_block"));
             emit(ir_inst[IR_JMP], NULL, label_check, NULL, NULL, "Check while loop");
             add_label(label_skip);
         }
+        else if (node->type == NODE_BREAK) {
+            // need to access parents body node, then pop block label
+            emit(ir_inst[IR_JMP], NULL, body->pop_block_label, NULL, NULL, "Break from while loop");
+        }
     }
-    pop_block(body);
+    return pop_block(body, pop_block_label);
 }
 
 [[nodiscard]]
@@ -508,7 +500,7 @@ static bool ir_process_globals(ast_node_t *global_node)
             emit(ir_inst[IR_LDI], ir_registers[IR_SP].name, stack_init, NULL, NULL, "Set up stack pointer");
             cpu_stack_pointer = strtol(stack_init, NULL, 10);
         }
-        ir_process_scope(&global_node->node_union.fn_node.body_node.body);
+        ir_process_scope(&global_node->node_union.fn_node.body_node.body, NULL);
         emit(ir_inst[IR_RET], NULL, NULL, NULL, NULL, NULL);
     }
     return true;

@@ -13,10 +13,12 @@ typedef enum node_type {
     NODE_EXPRESSION,
     NODE_INLINE_ASM,
     NODE_IF_STATEMENT,
-    NODE_WHILE_STATEMENT
+    NODE_WHILE_STATEMENT,
+    NODE_BREAK
 } node_type_t;
 
 struct ast_node;
+union ast_node_union;
 
 typedef struct {
     struct ast_node **ast_nodes;
@@ -27,6 +29,7 @@ typedef struct {
 
 typedef struct {
     ast_node_ptr_t body;
+    const char *pop_block_label;
 } body_node_t;
 
 typedef struct {
@@ -87,7 +90,7 @@ typedef struct {
     body_node_t body_node;
 } while_statement_node_t;
 
-typedef union {
+typedef union ast_node_union {
     program_node_t program_node;
     name_node_t name_node;
     block_node_t block_node;

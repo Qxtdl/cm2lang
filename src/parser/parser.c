@@ -201,6 +201,9 @@ void parser_process(void)
                 create_ast_node(false, (ast_node_t){NODE_EXPRESSION, {{{{0}}}}}));
             push_context(PARSE_WHILE_STATEMENT);            
             break;
+        case TOKEN_BREAK: 
+            insert_ast_node(last_created_block_node, create_ast_node(true, (ast_node_t){NODE_BREAK, {0}})); 
+            break;
         case TOKEN_ASM:
             insert_ast_node(last_created_block_nodes, create_ast_node(true, (ast_node_t){NODE_INLINE_ASM, {{{{0}}}}}));
             push_context(PARSE_INLINE_ASM);
